@@ -40,7 +40,7 @@ const ProfileForm = ({ user, onUpdate }) => {
     try {
       const token = localStorage.getItem("token");
       const res = await axios.put(
-        `http://localhost:5000/api/profile/update`,
+        `https://startup-backend-1-cj33.onrender.com/api/profile/update`,
         { ...formData, expertise: formData.expertise.split(",") },
         {
           headers: {

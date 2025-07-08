@@ -22,7 +22,7 @@ const MentorProfile = () => {
   useEffect(() => {
     const fetchMentor = async () => {
       try {
-        const { data } = await axios.get(`http://localhost:5000/api/mentors/${id}`);
+        const { data } = await axios.get(`https://startup-backend-1-cj33.onrender.com/api/mentors/${id}`);
         setMentor(data);
         setLoading(false);
       } catch (err) {
@@ -36,7 +36,7 @@ const MentorProfile = () => {
   const handleRequest = async () => {
     try {
       await axios.post(
-        "http://localhost:5000/api/mentorship/request",
+        "https://startup-backend-1-cj33.onrender.com/api/mentorship/request",
         { mentorId: id },
         {
           headers: { Authorization: `Bearer ${token}` },

@@ -4,7 +4,7 @@ import { Box, Grid, Typography, CircularProgress } from "@mui/material";
 import MentorCard from "./MentorCard";
 
 const fetchMentors = async () => {
-  const res = await axios.get("http://localhost:5000/api/mentors");
+  const res = await axios.get("https://startup-backend-1-cj33.onrender.com/api/mentors");
   return res.data;
 };
 

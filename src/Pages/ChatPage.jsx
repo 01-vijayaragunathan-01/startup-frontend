@@ -13,7 +13,7 @@ import { io } from "socket.io-client";
 import axios from "axios";
 import toast from "react-hot-toast";
 
-const socket = io("http://localhost:5000");
+const socket = io("https://startup-backend-1-cj33.onrender.com");
 
 const ChatPage = () => {
   const { state } = useLocation();
@@ -37,7 +37,7 @@ const ChatPage = () => {
       try {
         // Fetch messages
         const msgRes = await axios.get(
-          `http://localhost:5000/api/messages/${receiverId}`,
+          `https://startup-backend-1-cj33.onrender.com/api/messages/${receiverId}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -46,7 +46,7 @@ const ChatPage = () => {
 
         // Fetch receiver profile
         const userRes = await axios.get(
-          `http://localhost:5000/api/profile/user/${receiverId}`,
+          `https://startup-backend-1-cj33.onrender.com/api/profile/user/${receiverId}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -87,7 +87,7 @@ const ChatPage = () => {
 
     socket.emit("sendMessage", newMessage);
 
-    await axios.post("http://localhost:5000/api/messages", newMessage, {
+    await axios.post("https://startup-backend-1-cj33.onrender.com/api/messages", newMessage, {
       headers: { Authorization: `Bearer ${token}` },
     });
 

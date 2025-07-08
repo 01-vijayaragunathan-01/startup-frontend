@@ -30,7 +30,7 @@ const MarketTrends = () => {
 
   const fetchResources = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/resources");
+      const res = await axios.get("https://startup-backend-1-cj33.onrender.com/api/resources");
       setResources(res.data);
     } catch (error) {
       console.error("Failed to load resources", error);
@@ -39,7 +39,7 @@ const MarketTrends = () => {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`http://localhost:5000/api/resources/${id}`, {
+      await axios.delete(`https://startup-backend-1-cj33.onrender.com/api/resources/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast.success("Resource deleted");

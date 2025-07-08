@@ -17,7 +17,7 @@ const Login = () => {
 
   const loginMutation = useMutation({
     mutationFn: async (formData) => {
-      const res = await axios.post("http://localhost:5000/api/auth/login", formData);
+      const res = await axios.post("https://startup-backend-1-cj33.onrender.com/api/auth/login", formData);
       return res.data;
     },
     onSuccess: (data) => {

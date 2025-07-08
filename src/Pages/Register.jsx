@@ -18,7 +18,7 @@ const Register = () => {
 
   const registerMutation = useMutation({
     mutationFn: async (formData) => {
-      const res = await axios.post("http://localhost:5000/api/auth/register", formData);
+      const res = await axios.post("https://startup-backend-1-cj33.onrender.com/api/auth/register", formData);
       return res.data;
     },
     onSuccess: (data) => {

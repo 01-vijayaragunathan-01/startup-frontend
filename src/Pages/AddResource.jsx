@@ -51,7 +51,7 @@ const AddResource = () => {
         image: imageUrl,
       };
 
-      await axios.post("http://localhost:5000/api/resources", payload, {
+      await axios.post("https://startup-backend-1-cj33.onrender.com/api/resources", payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

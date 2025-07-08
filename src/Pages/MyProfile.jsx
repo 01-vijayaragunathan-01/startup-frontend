@@ -25,7 +25,7 @@ const MyProfile = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const { data } = await axios.get("http://localhost:5000/api/profile/me", {
+        const { data } = await axios.get("https://startup-backend-1-cj33.onrender.com/api/profile/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setName(data.name || "");
@@ -49,7 +49,7 @@ const MyProfile = () => {
     formData.append("file", file);
 
     try {
-      const res = await axios.post("http://localhost:5000/api/upload/image", formData, {
+      const res = await axios.post("https://startup-backend-1-cj33.onrender.com/api/upload/image", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
           Authorization: `Bearer ${token}`,
@@ -77,7 +77,7 @@ const MyProfile = () => {
     e.preventDefault();
     try {
       await axios.put(
-        "http://localhost:5000/api/profile/update",
+        "https://startup-backend-1-cj33.onrender.com/api/profile/update",
         { name, about, expertise, avatar, banner },
         { headers: { Authorization: `Bearer ${token}` } }
       );

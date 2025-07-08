@@ -31,7 +31,7 @@ const MentorCard = ({ mentor, mentorshipStatus }) => {
       const token = localStorage.getItem("token");
 
       const res = await axios.post(
-        "http://localhost:5000/api/mentorship/request",
+        "https://startup-backend-1-cj33.onrender.com/api/mentorship/request",
         { mentorId: _id },
         {
           headers: {

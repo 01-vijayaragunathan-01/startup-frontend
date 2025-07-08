@@ -32,27 +32,27 @@ const Dashboard = () => {
     const fetchData = async () => {
       try {
         if (user?.role === "mentor") {
-          const reqRes = await axios.get("http://localhost:5000/api/mentorship/requests", {
+          const reqRes = await axios.get("https://startup-backend-1-cj33.onrender.com/api/mentorship/requests", {
             headers: { Authorization: `Bearer ${token}` },
           });
           setStudentRequests(reqRes.data.requests);
 
-          const profileRes = await axios.get("http://localhost:5000/api/profile/me", {
+          const profileRes = await axios.get("https://startup-backend-1-cj33.onrender.com/api/profile/me", {
             headers: { Authorization: `Bearer ${token}` },
           });
           setMentorProfile(profileRes.data);
         } else if (user?.role === "student") {
-          const mentorRes = await axios.get("http://localhost:5000/api/mentors");
+          const mentorRes = await axios.get("https://startup-backend-1-cj33.onrender.com/api/mentors");
           setMentors(mentorRes.data);
 
-          const reqRes = await axios.get("http://localhost:5000/api/mentorship/my-requests", {
+          const reqRes = await axios.get("https://startup-backend-1-cj33.onrender.com/api/mentorship/my-requests", {
             headers: { Authorization: `Bearer ${token}` },
           });
           setMyRequests(reqRes.data.requests || []);
         }
 
         // Fetch recent chats for both roles
-        const chatRes = await axios.get("http://localhost:5000/api/messages/contacts/recent", {
+        const chatRes = await axios.get("https://startup-backend-1-cj33.onrender.com/api/messages/contacts/recent", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setRecentChats(chatRes.data);
