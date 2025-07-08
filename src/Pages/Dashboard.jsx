@@ -136,30 +136,32 @@ const Dashboard = () => {
                 Recent Chats
               </Typography>
               <List>
-                {recentChats.map((person) => (
-                  <ListItem
-                    key={person._id}
-                    sx={{
-                      background: "#f9f9f9",
-                      mb: 1,
-                      borderRadius: 2,
-                      display: "flex",
-                      alignItems: "center",
-                      cursor: "pointer",
-                    }}
-                    onClick={() =>
-                      navigate("/chat", {
-                        state: {
-                          receiverId: person._id,
-                          receiverName: person.name,
-                        },
-                      })
-                    }
-                  >
-                    <Avatar src={person.avatar} sx={{ mr: 2 }} />
-                    <ListItemText primary={person.name} />
-                  </ListItem>
-                ))}
+                {recentChats
+                  .filter((person) => person && person.name)
+                  .map((person) => (
+                    <ListItem
+                      key={person._id}
+                      sx={{
+                        background: "#f9f9f9",
+                        mb: 1,
+                        borderRadius: 2,
+                        display: "flex",
+                        alignItems: "center",
+                        cursor: "pointer",
+                      }}
+                      onClick={() =>
+                        navigate("/chat", {
+                          state: {
+                            receiverId: person._id,
+                            receiverName: person.name,
+                          },
+                        })
+                      }
+                    >
+                      <Avatar src={person.avatar} sx={{ mr: 2 }} />
+                      <ListItemText primary={person.name} />
+                    </ListItem>
+                  ))}
               </List>
             </>
           )}
