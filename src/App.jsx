@@ -13,7 +13,7 @@ import Trends from "./Pages/Trends";
 import MyProfile from "./Pages/MyProfile";
 import PrivateRoute from "./components/PrivateRoute";
 import ChatPage from "./Pages/ChatPage";
-import Wm from "./Pages/Wm";
+
 import MarketTrends from "./Pages/MarketTrends";
 import AddResource from "./Pages/AddResource";
 // import ProfileUpdate from "./Pages/ProfileUpdate";
@@ -23,7 +23,6 @@ const App = () => {
   return (
     <div>
       <Navbar />
-      <Wm />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
@@ -35,10 +34,10 @@ const App = () => {
         <Route path="/chat" element={<ChatPage />} />
         <Route
           path="/my-profile"
-          element={
-            <PrivateRoute>
-              <MyProfile />
-            </PrivateRoute>
+          element={<MyProfile />
+            // <PrivateRoute>
+              
+            // </PrivateRoute>
           }
         />
         <Route path="/resources" element={<MarketTrends />} />
