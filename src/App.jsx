@@ -16,6 +16,7 @@ import ChatPage from "./Pages/ChatPage";
 
 import MarketTrends from "./Pages/MarketTrends";
 import AddResource from "./Pages/AddResource";
+import StudentHistory from "./Pages/StudentHistory";
 // import ProfileUpdate from "./Pages/ProfileUpdate";
 
 
@@ -46,6 +47,7 @@ const App = () => {
         <Route path="/trends" element={<Trends />} />
         <Route path="/chat/:mentorId" element={<Chat />} />
         <Route path="/mentor/:id" element={<MentorProfile />} />
+        <Route path="/student-history" element={<StudentHistory />} />  
       </Routes>
       <Footer />
     </div>
