@@ -122,40 +122,6 @@ const Footer = () => {
             </Stack>
           </Grid>
 
-          {/* Live System Status */}
-          <Grid item xs={12} md={4}>
-            <Typography variant="subtitle1" fontWeight={800} sx={{ mb: 3, color: "white" }}>
-              System Status
-            </Typography>
-            <Box
-              sx={{
-                p: 3,
-                borderRadius: "20px",
-                bgcolor: "rgba(112,0,255,0.05)",
-                border: `1px solid rgba(112,0,255,0.2)`,
-              }}
-            >
-              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1.5 }}>
-                <Box
-                  sx={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: "50%",
-                    bgcolor: "#27c93f",
-                    boxShadow: "0 0 10px #27c93f",
-                    animation: "pulse 2s infinite",
-                  }}
-                />
-                <Typography variant="caption" fontWeight={800} sx={{ color: "white", letterSpacing: 1 }}>
-                  142 MENTORS ONLINE
-                </Typography>
-              </Stack>
-              <Typography variant="body2" sx={{ color: colors.textDim, fontSize: "0.8rem" }}>
-                Our matching engine is currently processing at peak efficiency. 
-                Avg. match time: 4.2 mins.
-              </Typography>
-            </Box>
-          </Grid>
         </Grid>
 
         <Divider sx={{ my: 6, borderColor: "rgba(255,255,255,0.05)" }} />

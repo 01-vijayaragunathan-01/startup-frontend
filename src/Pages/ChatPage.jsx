@@ -5,6 +5,8 @@ import {
   Typography,
   Paper,
   Avatar,
+  Container,
+  Stack,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import { useEffect, useRef, useState } from "react";
@@ -28,6 +30,17 @@ const ChatPage = () => {
   const [receiverDetails, setReceiverDetails] = useState(null);
   const messagesEndRef = useRef(null);
 
+  // Premium Theme Colors
+  const colors = {
+    bg: "#030014",
+    accent: "#7000ff",
+    glass: "rgba(255, 255, 255, 0.03)",
+    glassBorder: "rgba(255, 255, 255, 0.08)",
+    textDim: "rgba(255, 255, 255, 0.6)",
+    myBubble: "linear-gradient(135deg, #7000ff 0%, #5a00cc 100%)",
+    theirBubble: "rgba(255, 255, 255, 0.05)",
+  };
+
   useEffect(() => {
     if (!user || !receiverId) return;
 
@@ -35,21 +48,15 @@ const ChatPage = () => {
 
     const fetchData = async () => {
       try {
-        // Fetch messages
         const msgRes = await axios.get(
           `https://startup-backend-1-cj33.onrender.com/api/messages/${receiverId}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         setMessages(msgRes.data);
 
-        // Fetch receiver profile
         const userRes = await axios.get(
           `https://startup-backend-1-cj33.onrender.com/api/profile/user/${receiverId}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         setReceiverDetails(userRes.data);
       } catch (err) {
@@ -61,20 +68,18 @@ const ChatPage = () => {
 
     socket.on("receiveMessage", (msg) => {
       setMessages((prev) => [...prev, msg]);
-
       if (msg.sender !== user._id) {
-        toast.custom(() => (
-          <div style={{ background: "#fff", padding: 12, borderRadius: 8 }}>
-            📩 New message from {receiverName}
-          </div>
-        ));
+        toast.success(`New message from ${receiverName}`, {
+          icon: '📩',
+          style: { borderRadius: '10px', background: '#333', color: '#fff' },
+        });
       }
     });
 
     return () => {
       socket.off("receiveMessage");
     };
-  }, [receiverId]);
+  }, [receiverId, token, user, receiverName]);
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -103,94 +108,141 @@ const ChatPage = () => {
     <Box
       sx={{
         minHeight: "100vh",
-        background: "#f0f2f5",
+        bgcolor: colors.bg,
         display: "flex",
-        justifyContent: "center",
         alignItems: "center",
+        justifyContent: "center",
+        position: 'relative',
+        overflow: 'hidden',
         py: 5,
       }}
     >
-      <Paper
-        sx={{
-          width: "90%",
-          maxWidth: 700,
-          height: "80vh",
-          display: "flex",
-          flexDirection: "column",
-          p: 2,
-          borderRadius: 3,
-          boxShadow: 4,
-        }}
-      >
-        <Typography variant="h6" fontWeight="bold" textAlign="center" mb={2}>
-          Chat with {receiverDetails?.name || receiverName}
-        </Typography>
+      {/* Background Decorative Glow */}
+      <Box sx={{
+        position: 'absolute',
+        width: '50vw', height: '50vw',
+        background: `radial-gradient(circle, rgba(112,0,255,0.05) 0%, transparent 70%)`,
+        filter: 'blur(100px)',
+        top: '50%', left: '50%',
+        transform: 'translate(-50%, -50%)',
+        zIndex: 0
+      }} />
 
-        <Box
+      <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
+        <Paper
           sx={{
-            flexGrow: 1,
-            overflowY: "auto",
-            p: 2,
+            height: "85vh",
             display: "flex",
             flexDirection: "column",
-            gap: 2,
+            background: colors.glass,
+            backdropFilter: "blur(20px)",
+            borderRadius: "24px",
+            border: `1px solid ${colors.glassBorder}`,
+            overflow: "hidden",
+            boxShadow: "0 25px 50px rgba(0,0,0,0.5)",
           }}
         >
-          {messages.map((msg, idx) => {
-            const isMe = msg.sender === user._id;
-            const showAvatar = !isMe ? receiverDetails?.avatar : user?.avatar;
-            const senderName = isMe ? user.name : receiverDetails?.name;
+          {/* CHAT HEADER */}
+          <Box sx={{ p: 2, borderBottom: `1px solid ${colors.glassBorder}`, textAlign: 'center' }}>
+            <Stack direction="row" spacing={2} alignItems="center" justifyContent="center">
+              <Avatar src={receiverDetails?.avatar} sx={{ border: `2px solid ${colors.accent}` }} />
+              <Box>
+                <Typography variant="h6" fontWeight={800} color="white">
+                  {receiverDetails?.name || receiverName}
+                </Typography>
+                <Typography variant="caption" sx={{ color: colors.accent, fontWeight: 700 }}>
+                  Active Session
+                </Typography>
+              </Box>
+            </Stack>
+          </Box>
 
-            return (
-              <Box
-                key={idx}
-                alignSelf={isMe ? "flex-end" : "flex-start"}
-                sx={{
-                  display: "flex",
-                  flexDirection: isMe ? "row-reverse" : "row",
-                  alignItems: "flex-start",
-                  gap: 1.5,
-                  maxWidth: "80%",
-                }}
-              >
-                <Avatar src={showAvatar} />
+          {/* MESSAGES AREA */}
+          <Box
+            sx={{
+              flexGrow: 1,
+              overflowY: "auto",
+              p: 3,
+              display: "flex",
+              flexDirection: "column",
+              gap: 3,
+              '&::-webkit-scrollbar': { width: '4px' },
+              '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '10px' }
+            }}
+          >
+            {messages.map((msg, idx) => {
+              const isMe = msg.sender === user._id;
+              const showAvatar = !isMe ? receiverDetails?.avatar : user?.avatar;
+
+              return (
                 <Box
+                  key={idx}
+                  alignSelf={isMe ? "flex-end" : "flex-start"}
                   sx={{
-                    backgroundColor: isMe ? "#1976d2" : "#e0e0e0",
-                    color: isMe ? "white" : "black",
-                    px: 2,
-                    py: 1,
-                    borderRadius: 2,
+                    display: "flex",
+                    flexDirection: isMe ? "row-reverse" : "row",
+                    alignItems: "flex-end",
+                    gap: 1.5,
+                    maxWidth: "85%",
                   }}
                 >
-                  <Typography
-                    variant="caption"
-                    sx={{ fontWeight: "bold", opacity: 0.8 }}
+                  <Avatar src={showAvatar} sx={{ width: 32, height: 32 }} />
+                  <Box
+                    sx={{
+                      background: isMe ? colors.myBubble : colors.theirBubble,
+                      color: "white",
+                      px: 2,
+                      py: 1.5,
+                      borderRadius: isMe ? "20px 20px 4px 20px" : "20px 20px 20px 4px",
+                      border: isMe ? 'none' : `1px solid ${colors.glassBorder}`,
+                      boxShadow: isMe ? `0 4px 15px rgba(112,0,255,0.3)` : 'none'
+                    }}
                   >
-                    {senderName}
-                  </Typography>
-                  <Typography>{msg.text}</Typography>
+                    <Typography variant="body2" sx={{ lineHeight: 1.6 }}>{msg.text}</Typography>
+                    <Typography variant="caption" sx={{ display: 'block', textAlign: isMe ? 'right' : 'left', mt: 0.5, opacity: 0.5, fontSize: '0.65rem' }}>
+                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Typography>
+                  </Box>
                 </Box>
-              </Box>
-            );
-          })}
-          <div ref={messagesEndRef} />
-        </Box>
+              );
+            })}
+            <div ref={messagesEndRef} />
+          </Box>
 
-        <Box display="flex" mt={2}>
-          <TextField
-            fullWidth
-            size="small"
-            placeholder="Type your message..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          />
-          <IconButton color="primary" onClick={handleSend}>
-            <SendIcon />
-          </IconButton>
-        </Box>
-      </Paper>
+          {/* INPUT AREA */}
+          <Box sx={{ p: 2, borderTop: `1px solid ${colors.glassBorder}` }}>
+            <Stack direction="row" spacing={1}>
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Message your mentor..."
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    color: 'white',
+                    borderRadius: '14px',
+                    bgcolor: 'rgba(255,255,255,0.03)',
+                    '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
+                    '&:hover fieldset': { borderColor: colors.accent },
+                  }
+                }}
+              />
+              <IconButton 
+                onClick={handleSend}
+                sx={{ 
+                  bgcolor: colors.accent, 
+                  color: 'white',
+                  '&:hover': { bgcolor: '#5a00cc' }
+                }}
+              >
+                <SendIcon />
+              </IconButton>
+            </Stack>
+          </Box>
+        </Paper>
+      </Container>
     </Box>
   );
 };

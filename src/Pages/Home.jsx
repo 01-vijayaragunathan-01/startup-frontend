@@ -105,17 +105,44 @@ const Home = () => {
 
   return (
     <Box ref={heroRef} sx={{ bgcolor: colors.bg, color: "white", minHeight: "100vh", overflowX: "hidden" }}>
-
-      {/* 1. HERO SECTION */}
-      <Box sx={{ position: "relative", pt: { xs: 15, md: 25 }, pb: { xs: 10, md: 25 } }}>
-        {/* Floating Images with GSAP Refs */}
+{/* 1. HERO SECTION */}
+      <Box 
+        ref={heroRef} 
+        sx={{ 
+          position: "relative", 
+          pt: { xs: 15, md: 25 }, 
+          pb: { xs: 10, md: 25 },
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          overflow: "hidden",
+          // The Professional Background Logic
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundImage: `url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop')`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            opacity: 0.15, // Low opacity for a professional technical look
+            zIndex: 0,
+          },
+          // Added a subtle gradient to ensure bottom content blends into next section
+          background: `linear-gradient(to bottom, transparent 0%, ${colors.bg} 100%)`
+        }}
+      >
+        {/* Floating Images (Kept but refined for opacity) */}
         <Box
           ref={floatImg1}
           component="img"
           src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=600"
           sx={{
             position: "absolute", left: "5%", top: "20%", width: { xs: 140, md: 300 },
-            borderRadius: "140px 140px 0 140px", zIndex: 1, opacity: 0.6,
+            borderRadius: "140px 140px 0 140px", zIndex: 1, opacity: 0.3,
+            filter: 'grayscale(0.5)'
           }}
         />
         <Box
@@ -124,7 +151,8 @@ const Home = () => {
           src="https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?auto=format&fit=crop&q=80&w=600"
           sx={{
             position: "absolute", right: "6%", top: "15%", width: { xs: 120, md: 260 },
-            borderRadius: "50%", zIndex: 1, opacity: 0.4,
+            borderRadius: "50%", zIndex: 1, opacity: 0.2,
+            filter: 'grayscale(0.5)'
           }}
         />
         <Box
@@ -133,162 +161,170 @@ const Home = () => {
           src="https://images.unsplash.com/photo-1515187029135-18ee286d815b?auto=format&fit=crop&q=80&w=600"
           sx={{
             position: "absolute", right: "10%", bottom: "10%", width: { xs: 130, md: 280 },
-            borderRadius: "0 140px 140px 140px", zIndex: 1, opacity: 0.5,
+            borderRadius: "0 140px 140px 140px", zIndex: 1, opacity: 0.25,
+            filter: 'grayscale(0.5)'
           }}
         />
 
         <Container maxWidth="lg" sx={{ position: "relative", zIndex: 2 }}>
           <Stack spacing={4} alignItems="center" textAlign="center">
-            {/* <Box className="reveal" sx={{
-              px: 3, py: 1, borderRadius: "100px", border: "1px solid rgba(112,0,255,0.4)",
-              bgcolor: "rgba(112,0,255,0.1)", color: "#b983ff", fontSize: "0.75rem", fontWeight: 800, letterSpacing: 1.5
-            }}>
-              CONNECTING MINDS • SHAPING FUTURES
-            </Box> */}
-            <Typography className="reveal" variant={isSmall ? "h3" : "h1"} fontWeight="500" sx={{ letterSpacing: "-0.05em", lineHeight: 0.95 }}>
-              Bridge the Gap<br/> 
-              <Box component="span" sx={{ background: `linear-gradient(to right, #fff, ${colors.accent})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                 Between Potential and Mastery
+            
+            <Typography 
+              className="reveal" 
+              variant={isSmall ? "h3" : "h1"} 
+              fontWeight="500" 
+              sx={{ 
+                letterSpacing: "-0.04em", 
+                lineHeight: 1,
+                textShadow: '0 0 30px rgba(0,0,0,0.5)' // Added for readability against image
+              }}
+            >
+              Build the connection<br />
+              <Box 
+                component="span" 
+                sx={{ 
+                  background: `linear-gradient(to right, #fff, ${colors.accent})`, 
+                  WebkitBackgroundClip: "text", 
+                  WebkitTextFillColor: "transparent" 
+                }}
+              >
+                Between Student & Mentor
               </Box>
             </Typography>
-            <Typography className="reveal" variant="h6" sx={{ color: colors.textDim, maxWidth: "650px", lineHeight: 1.6 }}>
-              A high-precision matchmaking platform where ambitious students meet world-class mentors to engineer the future.
+
+            <Typography 
+              className="reveal" 
+              variant="h6" 
+              sx={{ 
+                color: colors.textDim, 
+                maxWidth: "650px", 
+                lineHeight: 1.6,
+                fontWeight: 400 
+              }}
+            >
+              A high-precision matchmaking platform where ambitious students meet world-class SRM mentors to architect the future of engineering.
             </Typography>
-            <Stack className="reveal" direction={{ xs: "column", sm: "row" }} spacing={3}>
-              <Button variant="contained" onClick={handleGetStarted} sx={{ bgcolor: colors.accent, px: 6, py: 2, borderRadius: "14px", fontWeight: 800 }}>
+
+            <Stack className="reveal" direction={{ xs: "column", sm: "row" }} spacing={3} sx={{ pt: 2 }}>
+              <Button 
+                variant="contained" 
+                onClick={handleGetStarted} 
+                sx={{ 
+                  bgcolor: colors.accent, 
+                  px: 6, 
+                  py: 2, 
+                  borderRadius: "12px", 
+                  fontWeight: 800,
+                  boxShadow: `0 10px 30px rgba(112,0,255,0.3)` 
+                }}
+              >
                 Find Your Mentor
               </Button>
-              <Button variant="outlined" sx={{ borderColor: "rgba(255,255,255,0.2)", color: "white", px: 5, borderRadius: "14px" }}>
+              <Button 
+                variant="outlined" 
+                sx={{ 
+                  borderColor: "rgba(255,255,255,0.2)", 
+                  color: "white", 
+                  px: 5, 
+                  borderRadius: "12px",
+                  backdropFilter: 'blur(10px)' 
+                }}
+              >
                 Explore Programs
               </Button>
             </Stack>
-            <Stack className="reveal" direction="row" alignItems="center" spacing={2} sx={{ pt: 4 }}>
-              <AvatarGroup max={4} sx={{ "& .MuiAvatar-root": { width: 40, height: 40, border: `3px solid ${colors.bg}` } }}>
-                <Avatar src="https://i.pravatar.cc/150?u=1" /><Avatar src="https://i.pravatar.cc/150?u=2" />
+
+            <Stack className="reveal" direction="row" alignItems="center" spacing={2} sx={{ pt: 6 }}>
+              <AvatarGroup max={4} sx={{ "& .MuiAvatar-root": { width: 45, height: 45, border: `3px solid ${colors.bg}` } }}>
+                <Avatar src="https://i.pravatar.cc/150?u=1" />
+                <Avatar src="https://i.pravatar.cc/150?u=2" />
+                <Avatar src="https://i.pravatar.cc/150?u=3" />
               </AvatarGroup>
-              <Typography variant="caption" sx={{ color: colors.textDim }}>JOINED BY <span style={{ color: "white", fontWeight: 700 }}>12,000+</span> STUDENTS</Typography>
+              <Typography variant="caption" sx={{ color: colors.textDim, fontWeight: 500, letterSpacing: 1 }}>
+                JOINED BY <span style={{ color: "white", fontWeight: 800 }}>12,000+</span> SRM STUDENTS
+              </Typography>
             </Stack>
+
           </Stack>
         </Container>
       </Box>
 
-      {/* 2. INTERACTIVE SANDBOX SECTION */}
-      <Container maxWidth="lg" sx={{ py: 15 }}>
-        <Grid container spacing={8} alignItems="center">
-          <Grid item xs={12} md={6} data-aos="fade-right">
-            <Typography variant="h3" fontWeight={900} sx={{ mb: 3 }}>The Virtual <br /> Pair-Programming Suite</Typography>
-            <Typography sx={{ color: colors.textDim, mb: 4 }}>Experience real-time interaction with CTOs. Drag code blocks and get instant line-by-line logic optimization.</Typography>
-            <Stack spacing={3}>
-              <Stack direction="row" spacing={2}><ElectricBoltIcon sx={{ color: colors.accent }} /><Typography fontWeight={700}>Real-time Collaboration</Typography></Stack>
-              <Stack direction="row" spacing={2}><GroupsIcon sx={{ color: colors.accent }} /><Typography fontWeight={700}>Live Whiteboarding</Typography></Stack>
-            </Stack>
-          </Grid>
-          <Grid item xs={12} md={6} data-aos="zoom-in">
-            <Box sx={{ ...glassStyle, p: 0, overflow: "hidden", height: 400, display: "flex", flexDirection: "column" }}>
-              <Box sx={{ px: 3, py: 1.5, bgcolor: "rgba(255,255,255,0.05)", display: "flex", gap: 1 }}>
-                <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: "#ff5f56" }} />
-                <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: "#ffbd2e" }} />
-                <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: "#27c93f" }} />
-              </Box>
-              <Box sx={{ p: 4, flexGrow: 1, fontFamily: "monospace", color: "#b983ff" }}>
-                <Typography variant="body2" sx={{ color: colors.textDim }}>// Mentor: Suggesting O(log n) solution</Typography>
-                <Typography variant="body2" sx={{ mt: 1 }}>def optimize_search(data):</Typography>
-                <Box sx={{ mt: 2, p: 2, border: "1px dashed #7000ff", borderRadius: 2 }}>Drag Fix Here</Box>
-              </Box>
-            </Box>
-          </Grid>
-        </Grid>
-      </Container>
-      {/* 3. PROBLEM & SOLUTION SECTION */}
-      <Box sx={{ py: 15, bgcolor: "rgba(255,255,255,0.01)" }}>
+      {/* SECTION 2: LIVE INTERACTION ADVERTISEMENT */}
+      <Box sx={{ py: 20, position: 'relative' }}>
         <Container maxWidth="lg">
-          <Typography
-            align="center"
-            variant="h3"
-            fontWeight={900}
-            sx={{ mb: 10, letterSpacing: '-0.02em' }}
-          >
-            Tailored For Your <span style={{ color: colors.accent }}>Growth</span>
-          </Typography>
+          <Grid container spacing={10} alignItems="center">
 
-          <Grid container spacing={4} sx={{ display: 'flex', alignItems: 'stretch' }}>
-            {[
-              {
-                role: "For Students",
-                prob: "No-Experience Paradox",
-                desc: "Break the cycle of needing experience to get experience through production-level guidance and real-world project builds.",
-                img: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1471&auto=format&fit=crop"
-              },
-              {
-                role: "For Mentors",
-                prob: "Leadership Growth",
-                desc: "Refine your management style and give back to the community by guiding ambitious developers through complex technical challenges.",
-                img: "https://images.unsplash.com/photo-1515187029135-18ee286d815b?auto=format&fit=crop&q=80&w=800"
-              }
-            ].map((item, i) => (
-              <Grid
-                item
-                xs={12}
-                md={6}
-                key={i}
-                sx={{ display: 'flex' }} // Ensures the Grid item itself acts as a flex container
-                data-aos={i === 0 ? "fade-right" : "fade-left"}
-              >
-                <Box sx={{
-                  ...glassStyle,
-                  p: 4,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  width: '100%', // Ensures card takes full grid width
-                  height: '100%', // Ensures both cards have the same height
-                  justifyContent: 'space-between'
-                }}>
-                  <Box>
-                    <Box
-                      component="img"
-                      src={item.img}
-                      sx={{
-                        width: "100%",
-                        height: 250,
-                        borderRadius: 4,
-                        objectFit: "cover",
-                        mb: 3,
-                        border: '1px solid rgba(255,255,255,0.1)'
-                      }}
-                    />
-                    <Typography variant="overline" color={colors.accent} fontWeight={800} sx={{ letterSpacing: 1.5 }}>
-                      {item.role}
-                    </Typography>
-                    <Typography variant="h5" fontWeight={800} gutterBottom sx={{ mt: 1 }}>
-                      {item.prob}
-                    </Typography>
-                    <Typography sx={{ color: colors.textDim, lineHeight: 1.7 }}>
-                      {item.desc}
-                    </Typography>
-                  </Box>
+            {/* TEXT CONTENT */}
+            <Grid item xs={12} md={5} data-aos="fade-right">
+              <Stack spacing={3}>
+                <Typography variant="overline" sx={{ color: colors.accent, fontWeight: 900, letterSpacing: 3 }}>
+                  REAL-TIME ENGAGEMENT
+                </Typography>
+                <Typography variant="h3" fontWeight={900} sx={{ lineHeight: 1.1 }}>
+                  Direct Access to <br />
+                  <Box component="span" sx={{ color: colors.accent }}>Industry Intelligence.</Box>
+                </Typography>
+                <Typography sx={{ color: colors.textDim, fontSize: '1.1rem', lineHeight: 1.8 }}>
+                  Break the digital barrier. Engage in high-bandwidth 1-on-1 video sessions with SRM alumni and technical leads from Tier-1 global firms.
+                </Typography>
+                <Stack spacing={2}>
+                  {[
+                    "High-Definition Low Latency Video",
+                    "Integrated Collaborative Whiteboard",
+                    "Instant Session Scheduling"
+                  ].map((text, i) => (
+                    <Stack key={i} direction="row" spacing={2} alignItems="center">
+                      <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: colors.accent }} />
+                      <Typography variant="body2" fontWeight={700}>{text}</Typography>
+                    </Stack>
+                  ))}
+                </Stack>
+                <Button variant="contained" sx={{ width: 'fit-content', mt: 2, bgcolor: colors.accent, px: 4, borderRadius: '8px' }}>
+                  SCHEDULE A MEET
+                </Button>
+              </Stack>
+            </Grid>
 
-                  <Button
-                    variant="text"
-                    sx={{
-                      mt: 4,
-                      width: 'fit-content',
-                      color: '#fff',
-                      p: 0,
-                      fontWeight: 700,
-                      textTransform: 'none',
-                      "&:hover": { color: colors.accent, bgcolor: 'transparent' }
-                    }}
-                  >
-                    Learn More —&gt;
-                  </Button>
-                </Box>
-              </Grid>
-            ))}
+{/* SECTION: LIVE SESSION AD BANNER (VERIFIED PRODUCTION LOAD) */}
+      <Container maxWidth="lg" sx={{ py: 10 }}>
+        <Box 
+          data-aos="zoom-in"
+          sx={{ 
+            width: '100%', 
+            height: { xs: '300px', md: '550px' }, 
+            position: 'relative', 
+            overflow: 'hidden', 
+            borderRadius: '40px',
+            // FALLBACK: Deep Slate ensures the UI doesn't look "empty" if net is slow
+            backgroundColor: '#0a0a20', 
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            // High-Resolution Engineering Session (Verified CDN)
+            backgroundImage: `url('https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=2070&auto=format&fit=crop')`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            boxShadow: '0 40px 100px -20px rgba(0,0,0,0.8)',
+            transition: 'all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1)',
+            cursor: 'pointer',
+            '&:hover': {
+              borderColor: '#7000ff',
+              transform: 'scale(1.01)',
+              boxShadow: `0 0 50px rgba(112, 0, 255, 0.2)`
+            },
+            // Cinematic Overlay
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(to bottom, rgba(3,0,20,0.2) 0%, rgba(3,0,20,0.6) 100%)',
+              pointerEvents: 'none'
+            }
+          }}
+        />
+      </Container>
+
           </Grid>
         </Container>
       </Box>
-
-
       {/* 4. SOCIAL PROOF */}
       <Container maxWidth="lg" sx={{ py: 15, textAlign: "center" }}>
         <Typography variant="overline" sx={{ color: colors.textDim, letterSpacing: 3 }}>TRUSTED BY MENTORS FROM</Typography>
@@ -401,128 +437,6 @@ const Home = () => {
     `}
         </style>
       </Box>
-
-      {/* 6. INTERACTIVE CTA / LEAD MAGNET */}
-      <Container maxWidth="md" sx={{ py: 15 }}>
-        <Box
-          data-aos="zoom-in"
-          sx={{
-            ...glassStyle,
-            p: { xs: 5, md: 10 },
-            textAlign: 'center',
-            position: 'relative',
-            overflow: 'hidden',
-            background: `radial-gradient(circle at top right, rgba(112,0,255,0.15), transparent), ${colors.glass}`
-          }}
-        >
-          {/* Decorative Background Element */}
-          <Box sx={{
-            position: 'absolute',
-            bottom: -50,
-            left: -50,
-            width: 200,
-            height: 200,
-            background: colors.accent,
-            filter: 'blur(100px)',
-            opacity: 0.1,
-            zIndex: 0
-          }} />
-
-          <Stack spacing={4} alignItems="center" sx={{ position: 'relative', zIndex: 1 }}>
-            <Typography variant="h3" fontWeight={900} sx={{ letterSpacing: '-0.02em' }}>
-              Ready to Engineer <br />
-              <span style={{ color: colors.accent }}>Excellence?</span>
-            </Typography>
-
-            <Typography sx={{ color: colors.textDim, maxWidth: '500px', fontSize: '1.1rem' }}>
-              Join 15,000+ members already scaling their careers. Start your journey with a single connection.
-            </Typography>
-
-            {/* Primary Conversion Form */}
-            <Box sx={{ width: '100%', maxWidth: 500 }}>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                <TextField
-                  fullWidth
-                  placeholder="university@edu or professional email"
-                  variant="outlined"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      color: 'white',
-                      borderRadius: '14px',
-                      bgcolor: 'rgba(255,255,255,0.05)',
-                      '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
-                      '&:hover fieldset': { borderColor: colors.accent },
-                      '&.Mui-focused fieldset': { borderColor: colors.accent }
-                    }
-                  }}
-                />
-                <Button
-                  variant="contained"
-                  onClick={handleGetStarted}
-                  sx={{
-                    bgcolor: colors.accent,
-                    px: 4,
-                    py: { xs: 2, sm: 0 },
-                    borderRadius: '14px',
-                    fontWeight: 800,
-                    whiteSpace: 'nowrap',
-                    boxShadow: `0 10px 30px rgba(112,0,255,0.3)`,
-                    '&:hover': { bgcolor: '#5a00cc', transform: 'translateY(-2px)' }
-                  }}
-                >
-                  Request Demo
-                </Button>
-              </Stack>
-            </Box>
-
-            <Divider sx={{ width: '100%', my: 2, '&::before, &::after': { borderColor: 'rgba(255,255,255,0.1)' } }}>
-              <Typography variant="caption" sx={{ color: colors.textDim, fontWeight: 700, letterSpacing: 1 }}>
-                OR ACCELERATE WITH
-              </Typography>
-            </Divider>
-
-            {/* Alternative Engagement (Low Friction) */}
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ width: '100%', maxWidth: 500 }}>
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<VerifiedUserIcon />}
-                sx={{
-                  color: 'white',
-                  py: 1.5,
-                  borderRadius: '12px',
-                  borderColor: 'rgba(255,255,255,0.2)',
-                  textTransform: 'none',
-                  fontWeight: 700,
-                  '&:hover': { borderColor: '#fff', bgcolor: 'rgba(255,255,255,0.05)' }
-                }}
-              >
-                Sign up with Google
-              </Button>
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<GroupsIcon />}
-                sx={{
-                  color: 'white',
-                  py: 1.5,
-                  borderRadius: '12px',
-                  borderColor: 'rgba(255,255,255,0.2)',
-                  textTransform: 'none',
-                  fontWeight: 700,
-                  '&:hover': { borderColor: '#fff', bgcolor: 'rgba(255,255,255,0.05)' }
-                }}
-              >
-                Join via Slack
-              </Button>
-            </Stack>
-
-            <Typography variant="caption" sx={{ color: colors.textDim, mt: 2 }}>
-              No credit card required. 14-day premium trial included.
-            </Typography>
-          </Stack>
-        </Box>
-      </Container>
 
       {/* 4. STUDENT ACHIEVEMENTS: INFINITE CAROUSEL */}
       <Box sx={{ py: 15, bgcolor: colors.bg, overflow: 'hidden' }}>
