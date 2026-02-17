@@ -5,25 +5,22 @@ import {
   TableContainer, TableRow, Chip, IconButton,
   CircularProgress, Tooltip
 } from "@mui/material";
-import SaveIcon from "@mui/icons-material/Save";
-import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import RefreshIcon from "@mui/icons-material/Refresh";
+import SaveIcon               from "@mui/icons-material/Save";
+import AddCircleOutlineIcon   from "@mui/icons-material/AddCircleOutline";
+import DeleteOutlineIcon      from "@mui/icons-material/DeleteOutline";
+import RefreshIcon            from "@mui/icons-material/Refresh";
 import axios from "axios";
 import toast from "react-hot-toast";
 
-// ─── Same render URL used across the project (matches AddResource.jsx) ────────
 const BASE_URL = "https://startup-backend-1-cj33.onrender.com";
 
-// ─── Defaults ─────────────────────────────────────────────────────────────────
 const defaultSemester = (id) => ({
   id,
   semesterNumber: id,
-  gpa: "",
+  gpa:      "",
   subjects: [{ code: "", name: "", marks: "" }],
 });
 
-// ─── Component ────────────────────────────────────────────────────────────────
 const StudentHistory = () => {
   const token       = localStorage.getItem("token");
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
@@ -36,51 +33,28 @@ const StudentHistory = () => {
     fullName: "", regNo: "", phoneNumber: "",
     dob: "", department: "", permanentAddress: "",
   });
-
   const [guardians, setGuardians] = useState({
     fatherName: "", fatherOccupation: "",
     motherName: "", motherOccupation: "",
   });
-
   const [schooling, setSchooling] = useState({
     highSchoolName: "", highSchoolPercentage: "",
     higherSecondaryName: "", higherSecondaryPercentage: "",
   });
-
-  const [skills, setSkills]                     = useState(["React.js", "Node.js", "MERN"]);
-  const [newSkill, setNewSkill]                 = useState("");
-  const [newAchievement, setNewAchievement]     = useState("");
-  const [certificationLink, setCertificationLink] = useState("");
-  const [semesters, setSemesters]               = useState([defaultSemester(1)]);
+  const [skills,             setSkills]             = useState([]);
+  const [newSkill,           setNewSkill]           = useState("");
+  const [newAchievement,     setNewAchievement]     = useState("");
+  const [certificationLink,  setCertificationLink]  = useState("");
+  const [semesters,          setSemesters]          = useState([defaultSemester(1)]);
 
   // ── UI state ────────────────────────────────────────────────────────────────
-  const [isNew,   setIsNew]   = useState(true);
+  // isNew: true  → no record in DB yet → use POST
+  // isNew: false → record exists       → use PUT
+  const [isNew,   setIsNew]   = useState(null);  // null = still loading
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
 
-  // ── Load record on mount ────────────────────────────────────────────────────
-  const loadRecord = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data } = await axios.get(
-        `${BASE_URL}/api/student-history`,
-        { headers: authHeaders }
-      );
-      hydrateForm(data.data);
-      setIsNew(false);
-    } catch (err) {
-      // 404 = no record yet, stay in create mode silently
-      if (err.response?.status !== 404) {
-        toast.error(err.response?.data?.message || "Failed to load history.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadRecord(); }, [loadRecord]);
-
-  // ── Populate all fields from API data ──────────────────────────────────────
+  // ── Hydrate form from API response ──────────────────────────────────────────
   const hydrateForm = (data) => {
     setIdentity({
       fullName:         data.fullName         || "",
@@ -90,16 +64,22 @@ const StudentHistory = () => {
       department:       data.department       || "",
       permanentAddress: data.permanentAddress || "",
     });
-    setGuardians(data.guardians || {
-      fatherName: "", fatherOccupation: "", motherName: "", motherOccupation: "",
+    setGuardians({
+      fatherName:       data.guardians?.fatherName       || "",
+      fatherOccupation: data.guardians?.fatherOccupation || "",
+      motherName:       data.guardians?.motherName       || "",
+      motherOccupation: data.guardians?.motherOccupation || "",
     });
-    setSchooling(data.schooling || {
-      highSchoolName: "", highSchoolPercentage: "",
-      higherSecondaryName: "", higherSecondaryPercentage: "",
+    setSchooling({
+      highSchoolName:            data.schooling?.highSchoolName            || "",
+      highSchoolPercentage:      data.schooling?.highSchoolPercentage      || "",
+      higherSecondaryName:       data.schooling?.higherSecondaryName       || "",
+      higherSecondaryPercentage: data.schooling?.higherSecondaryPercentage || "",
     });
     setSkills(data.skills || []);
     setNewAchievement(data.newAchievement || "");
     setCertificationLink(data.certificationLink || "");
+
     if (data.semesters?.length) {
       setSemesters(
         data.semesters.map((s) => ({
@@ -114,7 +94,35 @@ const StudentHistory = () => {
     }
   };
 
-  // ── Collect form into API payload ───────────────────────────────────────────
+  // ── Load record ──────────────────────────────────────────────────────────────
+  const loadRecord = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await axios.get(
+        `${BASE_URL}/api/student-history`,
+        { headers: authHeaders }
+      );
+      // Record exists
+      hydrateForm(data.data);
+      setIsNew(false);
+    } catch (err) {
+      const status = err.response?.status;
+      if (status === 404) {
+        // No record yet — show blank form, ready to POST
+        setIsNew(true);
+      } else {
+        // Real error (401, 500, network…)
+        toast.error(err.response?.data?.message || "Failed to load history.");
+        setIsNew(true); // allow saving even on unexpected errors
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []); // eslint-disable-line
+
+  useEffect(() => { loadRecord(); }, [loadRecord]);
+
+  // ── Build payload ────────────────────────────────────────────────────────────
   const buildPayload = () => ({
     ...identity,
     guardians,
@@ -129,37 +137,50 @@ const StudentHistory = () => {
     })),
   });
 
-  // ── Save (POST on first save, PUT on update) ────────────────────────────────
+  // ── Save (POST first time, PUT after) ───────────────────────────────────────
   const handleSync = async () => {
     setSaving(true);
     try {
       const payload = buildPayload();
+      let responseData;
 
       if (isNew) {
-        await axios.post(
+        const res = await axios.post(
           `${BASE_URL}/api/student-history`,
           payload,
           { headers: authHeaders }
         );
+        responseData = res.data.data;
+        setIsNew(false);
+        toast.success("History record created!");
       } else {
-        await axios.put(
+        const res = await axios.put(
           `${BASE_URL}/api/student-history`,
           payload,
           { headers: authHeaders }
         );
+        responseData = res.data.data;
+        toast.success("Ledger synced successfully!");
       }
 
-      setIsNew(false);
-      toast.success("Ledger synced successfully!");
+      if (responseData) hydrateForm(responseData);
     } catch (err) {
-      console.error(err.response?.data || err.message);
+      console.error("Save error:", err.response?.data || err.message);
+      // If server says record already exists, switch to PUT mode and retry
+      if (err.response?.status === 409) {
+        setIsNew(false);
+        toast.error("Record exists — retrying as update…");
+        setSaving(false);
+        handleSync();
+        return;
+      }
       toast.error(err.response?.data?.message || "Failed to sync ledger.");
     } finally {
       setSaving(false);
     }
   };
 
-  // ── Semester helpers ────────────────────────────────────────────────────────
+  // ── Semester helpers ─────────────────────────────────────────────────────────
   const addSemester = () => {
     if (semesters.length < 8) {
       const nextId = semesters.length + 1;
@@ -191,7 +212,7 @@ const StudentHistory = () => {
     setSemesters(updated);
   };
 
-  // ── Skill helpers ───────────────────────────────────────────────────────────
+  // ── Skill helpers ────────────────────────────────────────────────────────────
   const addSkill = () => {
     const trimmed = newSkill.trim();
     if (trimmed && !skills.includes(trimmed)) {
@@ -199,10 +220,9 @@ const StudentHistory = () => {
       setNewSkill("");
     }
   };
-
   const removeSkill = (skill) => setSkills(skills.filter((s) => s !== skill));
 
-  // ── Styles ──────────────────────────────────────────────────────────────────
+  // ── Styles ───────────────────────────────────────────────────────────────────
   const colors = {
     bg:     "#030014",
     accent: "#7000ff",
@@ -223,7 +243,6 @@ const StudentHistory = () => {
     "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: colors.accent },
   };
 
-  // ── Loading screen ──────────────────────────────────────────────────────────
   if (loading) {
     return (
       <Box sx={{ bgcolor: colors.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -232,12 +251,11 @@ const StudentHistory = () => {
     );
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <Box sx={{ bgcolor: colors.bg, minHeight: "100vh", py: 10, color: "#fff" }}>
       <Container maxWidth="xl">
 
-        {/* TOP SYSTEM BAR */}
+        {/* TOP BAR */}
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
           <Box>
             <Typography variant="h4" fontWeight={900} letterSpacing="-0.02em">
@@ -245,6 +263,11 @@ const StudentHistory = () => {
             </Typography>
             <Typography variant="caption" sx={{ color: colors.accent, fontWeight: 800, letterSpacing: 2 }}>
               SRM UNIVERSITY TRICHY {isMentor && "· MENTOR VIEW"}
+              {isNew && (
+                <Box component="span" sx={{ ml: 2, color: "rgba(255,200,0,0.8)", fontSize: "0.65rem" }}>
+                  ● NEW RECORD
+                </Box>
+              )}
             </Typography>
           </Box>
 
@@ -261,18 +284,18 @@ const StudentHistory = () => {
               disabled={saving}
               sx={{ bgcolor: colors.accent, px: 4, borderRadius: 0, fontWeight: 900 }}
             >
-              {saving ? "SYNCING…" : "SYNC_LEDGER"}
+              {saving ? "SYNCING…" : isNew ? "CREATE RECORD" : "SYNC_LEDGER"}
             </Button>
           </Stack>
         </Stack>
 
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
 
-          {/* ── LEFT SIDE ─────────────────────────────────────────────────── */}
+          {/* ── LEFT ──────────────────────────────────────────────────────── */}
           <Box sx={{ flex: { xs: "1 1 100%", lg: "1 1 65%" }, display: "flex", flexDirection: "column", gap: 3 }}>
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
 
-              {/* 01 // IDENTITY */}
+              {/* 01 IDENTITY */}
               <Paper sx={{ flex: "1 1 45%", p: 3, bgcolor: colors.glass, border: `1px solid ${colors.border}`, borderRadius: 0 }}>
                 <Typography variant="overline" color={colors.accent} fontWeight={900}>01 // IDENTITY</Typography>
                 <Stack spacing={1.5} sx={{ mt: 2 }}>
@@ -307,7 +330,7 @@ const StudentHistory = () => {
                 </Stack>
               </Paper>
 
-              {/* 02 // GUARDIANS */}
+              {/* 02 GUARDIANS */}
               <Paper sx={{ flex: "1 1 45%", p: 3, bgcolor: colors.glass, border: `1px solid ${colors.border}`, borderRadius: 0 }}>
                 <Typography variant="overline" color={colors.accent} fontWeight={900}>02 // GUARDIANS</Typography>
                 <Stack spacing={1.5} sx={{ mt: 2 }}>
@@ -334,7 +357,7 @@ const StudentHistory = () => {
 
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
 
-              {/* 03 // SCHOOLING */}
+              {/* 03 SCHOOLING */}
               <Paper sx={{ flex: "1 1 45%", p: 3, bgcolor: colors.glass, border: `1px solid ${colors.border}`, borderRadius: 0 }}>
                 <Typography variant="overline" color={colors.accent} fontWeight={900}>03 // SCHOOLING</Typography>
                 <Stack spacing={1.5} sx={{ mt: 2 }}>
@@ -357,7 +380,7 @@ const StudentHistory = () => {
                 </Stack>
               </Paper>
 
-              {/* 04 // PROFESSIONAL ASSETS */}
+              {/* 04 PROFESSIONAL ASSETS */}
               <Paper sx={{ flex: "1 1 45%", p: 3, bgcolor: colors.glass, border: `1px solid ${colors.border}`, borderRadius: 0 }}>
                 <Typography variant="overline" color={colors.accent} fontWeight={900}>04 // PROFESSIONAL_ASSETS</Typography>
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, my: 1.5 }}>
@@ -366,7 +389,7 @@ const StudentHistory = () => {
                       onDelete={() => removeSkill(skill)}
                       sx={{
                         bgcolor: "rgba(112,0,255,0.1)", color: colors.accent,
-                        border: `1px solid ${colors.accent}`, borderRadius: 0,
+                        border:  `1px solid ${colors.accent}`, borderRadius: 0,
                         "& .MuiChip-deleteIcon": { color: colors.accent },
                       }} />
                   ))}
@@ -394,7 +417,7 @@ const StudentHistory = () => {
             </Box>
           </Box>
 
-          {/* ── RIGHT SIDE: Academic Ledger ───────────────────────────────── */}
+          {/* ── RIGHT: Academic Ledger ─────────────────────────────────────── */}
           <Box sx={{ flex: { xs: "1 1 100%", lg: "1 1 32%" } }}>
             <Paper sx={{
               p: 3, bgcolor: colors.glass, border: `1px solid ${colors.border}`,
@@ -412,9 +435,9 @@ const StudentHistory = () => {
                         SEMESTER_0{sem.id}
                       </Typography>
                       <TextField placeholder="GPA" size="small"
-                        sx={{ width: "80px", "& .MuiInputBase-input": { p: 0.5, textAlign: "center", fontSize: "0.7rem", color: "#fff" } }}
                         value={sem.gpa}
-                        onChange={(e) => updateGpa(semIndex, e.target.value)} />
+                        onChange={(e) => updateGpa(semIndex, e.target.value)}
+                        sx={{ width: "80px", "& .MuiInputBase-input": { p: 0.5, textAlign: "center", fontSize: "0.7rem", color: "#fff" } }} />
                     </Stack>
 
                     <TableContainer>
