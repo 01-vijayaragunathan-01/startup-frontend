@@ -218,6 +218,7 @@ const Dashboard = () => {
   const [mentors,         setMentors]         = useState([]);
   const [myRequests,      setMyRequests]      = useState([]);
   const [recentChats,     setRecentChats]     = useState([]);
+  const [allStudents,     setAllStudents]     = useState([]); // NEW: for mentor dropdown
 
   const user     = JSON.parse(localStorage.getItem("user"));
   const token    = localStorage.getItem("token");
@@ -250,12 +251,14 @@ const Dashboard = () => {
     const fetchData = async () => {
       try {
         if (user?.role === "mentor") {
-          const [reqRes, profileRes] = await Promise.all([
+          const [reqRes, profileRes, studentsRes] = await Promise.all([
             axios.get(`${BASE_URL}/api/mentorship/requests`,  { headers: authHeaders }),
             axios.get(`${BASE_URL}/api/profile/me`,           { headers: authHeaders }),
+            axios.get(`${BASE_URL}/api/student-history/all`,  { headers: authHeaders }), // NEW
           ]);
           setStudentRequests(reqRes.data.requests);
           setMentorProfile(profileRes.data);
+          setAllStudents(studentsRes.data.data || []); // NEW
         } else {
           const [mentorRes, reqRes] = await Promise.all([
             axios.get(`${BASE_URL}/api/mentors`),
@@ -533,10 +536,46 @@ const Dashboard = () => {
                         startIcon={<HistoryEduIcon />}
                         sx={{ color: colors.accent, borderColor: "rgba(112,0,255,0.35)", borderRadius: 2, fontWeight: 700, "&:hover": { borderColor: colors.accent, bgcolor: colors.accentGlow } }}
                       >
-                        Student History
+                        My Student History
                       </Button>
                     </Stack>
                   </Box>
+                </Paper>
+              )}
+
+              {/* NEW: Mentor-only Student History Dropdown */}
+              {user?.role === "mentor" && allStudents.length > 0 && (
+                <Paper sx={glassCard}>
+                  <Typography variant="h6" fontWeight={800} mb={2}>Student Histories</Typography>
+                  <List disablePadding sx={{ maxHeight: 300, overflowY: "auto" }}>
+                    {allStudents.map((record, idx) => (
+                      <ListItem
+                        key={idx}
+                        disableGutters
+                        sx={{
+                          cursor: "pointer",
+                          borderRadius: 2,
+                          px: 1,
+                          py: 0.5,
+                          "&:hover": { bgcolor: "rgba(112,0,255,0.06)" },
+                        }}
+                        onClick={() => navigate(`/student-profile/${record.student._id}`)}
+                      >
+                        <Avatar
+                          src={record.student?.avatar}
+                          sx={{ mr: 1.5, width: 28, height: 28, bgcolor: colors.accent }}
+                        >
+                          {record.student?.name?.[0]?.toUpperCase()}
+                        </Avatar>
+                        <ListItemText
+                          primary={record.student?.name || "Unnamed"}
+                          secondary={record.regNo || "No Reg"}
+                          primaryTypographyProps={{ fontSize: "0.85rem", fontWeight: 600 }}
+                          secondaryTypographyProps={{ fontSize: "0.65rem", sx: { color: colors.textDim } }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
                 </Paper>
               )}
 

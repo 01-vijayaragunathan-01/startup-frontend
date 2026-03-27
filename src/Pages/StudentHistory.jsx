@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom"; // ADD navigate
 import {
   Box, Container, Typography, TextField, Button, Paper,
   Divider, Stack, Table, TableBody, TableCell,
   TableContainer, TableRow, Chip, IconButton,
-  CircularProgress, Tooltip
+  CircularProgress, Tooltip, Avatar, Grid
 } from "@mui/material";
-import SaveIcon               from "@mui/icons-material/Save";
-import AddCircleOutlineIcon   from "@mui/icons-material/AddCircleOutline";
-import DeleteOutlineIcon      from "@mui/icons-material/DeleteOutline";
-import RefreshIcon            from "@mui/icons-material/Refresh";
+import SaveIcon from "@mui/icons-material/Save";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 import axios from "axios";
 import toast from "react-hot-toast";
 
@@ -17,63 +19,76 @@ const BASE_URL = "https://startup-backend-1-cj33.onrender.com";
 const defaultSemester = (id) => ({
   id,
   semesterNumber: id,
-  gpa:      "",
+  gpa: "",
   subjects: [{ code: "", name: "", marks: "" }],
 });
 
 const StudentHistory = () => {
-  const token       = localStorage.getItem("token");
+  const navigate = useNavigate(); // ADD
+  const token = localStorage.getItem("token");
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const isMentor    = currentUser?.role === "mentor";
+  const isMentor = currentUser?.role === "mentor";
 
   const authHeaders = { Authorization: `Bearer ${token}` };
 
-  // ── Form state ──────────────────────────────────────────────────────────────
   const [identity, setIdentity] = useState({
-    fullName: "", regNo: "", phoneNumber: "",
-    dob: "", department: "", permanentAddress: "",
+    fullName: "", regNo: "", phoneNumber: "", dob: "", department: "",
+    permanentAddress: "", bloodGroup: "", aadhaarNo: "",
+    admissionNo: "", licenseNo: "", studentPhoto: ""
   });
+
   const [guardians, setGuardians] = useState({
-    fatherName: "", fatherOccupation: "",
-    motherName: "", motherOccupation: "",
+    fatherName: "", fatherOccupation: "", motherName: "", motherOccupation: "",
+    fatherPhoto: "", motherPhoto: "", fatherAadhaar: "", motherAadhaar: "",
+    fatherLicense: "", motherLicense: "", fatherAnnualIncome: "", motherAnnualIncome: ""
   });
+
   const [schooling, setSchooling] = useState({
     highSchoolName: "", highSchoolPercentage: "",
     higherSecondaryName: "", higherSecondaryPercentage: "",
   });
-  const [skills,             setSkills]             = useState([]);
-  const [newSkill,           setNewSkill]           = useState("");
-  const [newAchievement,     setNewAchievement]     = useState("");
-  const [certificationLink,  setCertificationLink]  = useState("");
-  const [semesters,          setSemesters]          = useState([defaultSemester(1)]);
+  const [skills, setSkills] = useState([]);
+  const [newSkill, setNewSkill] = useState("");
+  const [newAchievement, setNewAchievement] = useState("");
+  const [certificationLink, setCertificationLink] = useState("");
+  const [semesters, setSemesters] = useState([defaultSemester(1)]);
 
-  // ── UI state ────────────────────────────────────────────────────────────────
-  // isNew: true  → no record in DB yet → use POST
-  // isNew: false → record exists       → use PUT
-  const [isNew,   setIsNew]   = useState(null);  // null = still loading
+  const [isNew, setIsNew] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [saving,  setSaving]  = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  // ── Hydrate form from API response ──────────────────────────────────────────
   const hydrateForm = (data) => {
     setIdentity({
-      fullName:         data.fullName         || "",
-      regNo:            data.regNo            || "",
-      phoneNumber:      data.phoneNumber      || "",
-      dob:              data.dob ? data.dob.slice(0, 10) : "",
-      department:       data.department       || "",
+      fullName: data.fullName || "",
+      regNo: data.regNo || "",
+      phoneNumber: data.phoneNumber || "",
+      dob: data.dob ? data.dob.slice(0, 10) : "",
+      department: data.department || "",
       permanentAddress: data.permanentAddress || "",
+      bloodGroup: data.bloodGroup || "",
+      aadhaarNo: data.aadhaarNo || "",
+      admissionNo: data.admissionNo || "",
+      licenseNo: data.licenseNo || "",
+      studentPhoto: data.studentPhoto || "",
     });
     setGuardians({
-      fatherName:       data.guardians?.fatherName       || "",
+      fatherName: data.guardians?.fatherName || "",
       fatherOccupation: data.guardians?.fatherOccupation || "",
-      motherName:       data.guardians?.motherName       || "",
+      motherName: data.guardians?.motherName || "",
       motherOccupation: data.guardians?.motherOccupation || "",
+      fatherPhoto: data.guardians?.fatherPhoto || "",
+      motherPhoto: data.guardians?.motherPhoto || "",
+      fatherAadhaar: data.guardians?.fatherAadhaar || "",
+      motherAadhaar: data.guardians?.motherAadhaar || "",
+      fatherLicense: data.guardians?.fatherLicense || "",
+      motherLicense: data.guardians?.motherLicense || "",
+      fatherAnnualIncome: data.guardians?.fatherAnnualIncome || "",
+      motherAnnualIncome: data.guardians?.motherAnnualIncome || "",
     });
     setSchooling({
-      highSchoolName:            data.schooling?.highSchoolName            || "",
-      highSchoolPercentage:      data.schooling?.highSchoolPercentage      || "",
-      higherSecondaryName:       data.schooling?.higherSecondaryName       || "",
+      highSchoolName: data.schooling?.highSchoolName || "",
+      highSchoolPercentage: data.schooling?.highSchoolPercentage || "",
+      higherSecondaryName: data.schooling?.higherSecondaryName || "",
       higherSecondaryPercentage: data.schooling?.higherSecondaryPercentage || "",
     });
     setSkills(data.skills || []);
@@ -83,10 +98,10 @@ const StudentHistory = () => {
     if (data.semesters?.length) {
       setSemesters(
         data.semesters.map((s) => ({
-          id:             s.semesterNumber,
+          id: s.semesterNumber,
           semesterNumber: s.semesterNumber,
-          gpa:            s.gpa || "",
-          subjects:       s.subjects?.length
+          gpa: s.gpa || "",
+          subjects: s.subjects?.length
             ? s.subjects
             : [{ code: "", name: "", marks: "" }],
         }))
@@ -94,7 +109,21 @@ const StudentHistory = () => {
     }
   };
 
-  // ── Load record ──────────────────────────────────────────────────────────────
+  const handleImageUpload = (e, section, field) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (section === "identity") {
+          setIdentity({ ...identity, [field]: reader.result });
+        } else {
+          setGuardians({ ...guardians, [field]: reader.result });
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const loadRecord = useCallback(async () => {
     setLoading(true);
     try {
@@ -102,27 +131,23 @@ const StudentHistory = () => {
         `${BASE_URL}/api/student-history`,
         { headers: authHeaders }
       );
-      // Record exists
       hydrateForm(data.data);
       setIsNew(false);
     } catch (err) {
       const status = err.response?.status;
       if (status === 404) {
-        // No record yet — show blank form, ready to POST
         setIsNew(true);
       } else {
-        // Real error (401, 500, network…)
         toast.error(err.response?.data?.message || "Failed to load history.");
-        setIsNew(true); // allow saving even on unexpected errors
+        setIsNew(true);
       }
     } finally {
       setLoading(false);
     }
-  }, []); // eslint-disable-line
+  }, []);
 
   useEffect(() => { loadRecord(); }, [loadRecord]);
 
-  // ── Build payload ────────────────────────────────────────────────────────────
   const buildPayload = () => ({
     ...identity,
     guardians,
@@ -132,12 +157,11 @@ const StudentHistory = () => {
     certificationLink,
     semesters: semesters.map((s) => ({
       semesterNumber: s.semesterNumber || s.id,
-      gpa:            s.gpa,
-      subjects:       s.subjects,
+      gpa: s.gpa,
+      subjects: s.subjects,
     })),
   });
 
-  // ── Save (POST first time, PUT after) ───────────────────────────────────────
   const handleSync = async () => {
     setSaving(true);
     try {
@@ -166,7 +190,6 @@ const StudentHistory = () => {
       if (responseData) hydrateForm(responseData);
     } catch (err) {
       console.error("Save error:", err.response?.data || err.message);
-      // If server says record already exists, switch to PUT mode and retry
       if (err.response?.status === 409) {
         setIsNew(false);
         toast.error("Record exists — retrying as update…");
@@ -180,7 +203,6 @@ const StudentHistory = () => {
     }
   };
 
-  // ── Semester helpers ─────────────────────────────────────────────────────────
   const addSemester = () => {
     if (semesters.length < 8) {
       const nextId = semesters.length + 1;
@@ -212,7 +234,6 @@ const StudentHistory = () => {
     setSemesters(updated);
   };
 
-  // ── Skill helpers ────────────────────────────────────────────────────────────
   const addSkill = () => {
     const trimmed = newSkill.trim();
     if (trimmed && !skills.includes(trimmed)) {
@@ -222,11 +243,10 @@ const StudentHistory = () => {
   };
   const removeSkill = (skill) => setSkills(skills.filter((s) => s !== skill));
 
-  // ── Styles ───────────────────────────────────────────────────────────────────
   const colors = {
-    bg:     "#030014",
+    bg: "#030014",
     accent: "#7000ff",
-    glass:  "rgba(255, 255, 255, 0.02)",
+    glass: "rgba(255, 255, 255, 0.02)",
     border: "rgba(255, 255, 255, 0.08)",
   };
 
@@ -238,7 +258,7 @@ const StudentHistory = () => {
       fontSize: "0.8rem",
       borderRadius: "4px",
     },
-    "& .MuiInputLabel-root":              { color: "rgba(255,255,255,0.4)", fontSize: "0.75rem" },
+    "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.4)", fontSize: "0.75rem" },
     "& .MuiOutlinedInput-notchedOutline": { borderColor: colors.border },
     "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: colors.accent },
   };
@@ -263,11 +283,6 @@ const StudentHistory = () => {
             </Typography>
             <Typography variant="caption" sx={{ color: colors.accent, fontWeight: 800, letterSpacing: 2 }}>
               SRM UNIVERSITY TRICHY {isMentor && "· MENTOR VIEW"}
-              {isNew && (
-                <Box component="span" sx={{ ml: 2, color: "rgba(255,200,0,0.8)", fontSize: "0.65rem" }}>
-                  ● NEW RECORD
-                </Box>
-              )}
             </Typography>
           </Box>
 
@@ -293,70 +308,109 @@ const StudentHistory = () => {
 
           {/* ── LEFT ──────────────────────────────────────────────────────── */}
           <Box sx={{ flex: { xs: "1 1 100%", lg: "1 1 65%" }, display: "flex", flexDirection: "column", gap: 3 }}>
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
 
-              {/* 01 IDENTITY */}
-              <Paper sx={{ flex: "1 1 45%", p: 3, bgcolor: colors.glass, border: `1px solid ${colors.border}`, borderRadius: 0 }}>
-                <Typography variant="overline" color={colors.accent} fontWeight={900}>01 // IDENTITY</Typography>
-                <Stack spacing={1.5} sx={{ mt: 2 }}>
-                  <TextField fullWidth label="Full Legal Name"
-                    value={identity.fullName}
-                    onChange={(e) => setIdentity({ ...identity, fullName: e.target.value })}
-                    sx={inputStyles} />
-                  <Stack direction="row" spacing={2}>
-                    <TextField fullWidth label="Reg No"
-                      value={identity.regNo}
-                      onChange={(e) => setIdentity({ ...identity, regNo: e.target.value })}
-                      sx={inputStyles} />
-                    <TextField fullWidth label="Phone Number" placeholder="+91 XXX-XXX-XXXX"
-                      value={identity.phoneNumber}
-                      onChange={(e) => setIdentity({ ...identity, phoneNumber: e.target.value })}
-                      sx={inputStyles} />
+            {/* 01 IDENTITY */}
+            <Paper sx={{ p: 3, bgcolor: colors.glass, border: `1px solid ${colors.border}`, borderRadius: 0 }}>
+              <Typography variant="overline" color={colors.accent} fontWeight={900}>01 // IDENTITY & LEGAL</Typography>
+              <Grid container spacing={2} sx={{ mt: 2 }}>
+
+                {/* Student Photo Section */}
+                <Grid item xs={12} sm={3}>
+                  <Stack alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                    <Avatar
+                      src={identity.studentPhoto}
+                      variant="rounded"
+                      sx={{ width: 85, height: 100, bgcolor: "rgba(255,255,255,0.05)", border: `1px solid ${colors.border}` }}
+                    />
+                    <Button variant="text" component="label" sx={{ fontSize: '0.6rem', color: colors.accent }}>
+                      Upload Student Photo
+                      <input hidden accept="image/*" type="file" onChange={(e) => handleImageUpload(e, "identity", "studentPhoto")} />
+                    </Button>
                   </Stack>
-                  <Stack direction="row" spacing={2}>
-                    <TextField fullWidth label="DOB" type="date" InputLabelProps={{ shrink: true }}
-                      value={identity.dob}
-                      onChange={(e) => setIdentity({ ...identity, dob: e.target.value })}
-                      sx={inputStyles} />
-                    <TextField fullWidth label="Department"
-                      value={identity.department}
-                      onChange={(e) => setIdentity({ ...identity, department: e.target.value })}
-                      sx={inputStyles} />
-                  </Stack>
-                  <TextField fullWidth multiline rows={2} label="Permanent Address"
-                    value={identity.permanentAddress}
-                    onChange={(e) => setIdentity({ ...identity, permanentAddress: e.target.value })}
-                    sx={inputStyles} />
-                </Stack>
-              </Paper>
+                </Grid>
 
-              {/* 02 GUARDIANS */}
-              <Paper sx={{ flex: "1 1 45%", p: 3, bgcolor: colors.glass, border: `1px solid ${colors.border}`, borderRadius: 0 }}>
-                <Typography variant="overline" color={colors.accent} fontWeight={900}>02 // GUARDIANS</Typography>
-                <Stack spacing={1.5} sx={{ mt: 2 }}>
-                  <TextField fullWidth label="Father's Name"
-                    value={guardians.fatherName}
-                    onChange={(e) => setGuardians({ ...guardians, fatherName: e.target.value })}
-                    sx={inputStyles} />
-                  <TextField fullWidth label="Father's Occupation"
-                    value={guardians.fatherOccupation}
-                    onChange={(e) => setGuardians({ ...guardians, fatherOccupation: e.target.value })}
-                    sx={inputStyles} />
-                  <Divider sx={{ my: 1, borderColor: colors.border }} />
-                  <TextField fullWidth label="Mother's Name"
-                    value={guardians.motherName}
-                    onChange={(e) => setGuardians({ ...guardians, motherName: e.target.value })}
-                    sx={inputStyles} />
-                  <TextField fullWidth label="Mother's Occupation"
-                    value={guardians.motherOccupation}
-                    onChange={(e) => setGuardians({ ...guardians, motherOccupation: e.target.value })}
-                    sx={inputStyles} />
-                </Stack>
-              </Paper>
-            </Box>
+                {/* Identity Fields */}
+                <Grid item xs={12} sm={9}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={6}>
+                      <TextField fullWidth label="Full Legal Name" value={identity.fullName} onChange={(e) => setIdentity({ ...identity, fullName: e.target.value })} sx={inputStyles} />
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      <TextField fullWidth label="Blood Group" value={identity.bloodGroup} onChange={(e) => setIdentity({ ...identity, bloodGroup: e.target.value })} sx={inputStyles} />
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      <TextField fullWidth label="Admission No" value={identity.admissionNo} onChange={(e) => setIdentity({ ...identity, admissionNo: e.target.value })} sx={inputStyles} />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <TextField fullWidth label="Reg No" value={identity.regNo} onChange={(e) => setIdentity({ ...identity, regNo: e.target.value })} sx={inputStyles} />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <TextField fullWidth label="Phone Number" value={identity.phoneNumber} onChange={(e) => setIdentity({ ...identity, phoneNumber: e.target.value })} sx={inputStyles} />
+                    </Grid>
+                  </Grid>
+                </Grid>
+
+                {/* Legal ID Row */}
+                <Grid item xs={12} md={4}>
+                  <TextField fullWidth label="Aadhaar No" value={identity.aadhaarNo} onChange={(e) => setIdentity({ ...identity, aadhaarNo: e.target.value })} sx={inputStyles} />
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <TextField fullWidth label="License No" value={identity.licenseNo} onChange={(e) => setIdentity({ ...identity, licenseNo: e.target.value })} sx={inputStyles} />
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <TextField fullWidth label="DOB" type="date" InputLabelProps={{ shrink: true }} value={identity.dob} onChange={(e) => setIdentity({ ...identity, dob: e.target.value })} sx={inputStyles} />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField fullWidth multiline rows={2} label="Permanent Address" value={identity.permanentAddress} onChange={(e) => setIdentity({ ...identity, permanentAddress: e.target.value })} sx={inputStyles} />
+                </Grid>
+              </Grid>
+            </Paper>
+
+            <Paper sx={{ p: 3, bgcolor: colors.glass, border: `1px solid ${colors.border}`, borderRadius: 0 }}>
+              <Typography variant="overline" color={colors.accent} fontWeight={900}>02 // GUARDIAN DOSSIER</Typography>
+              <Grid container spacing={3} sx={{ mt: 2 }}>
+
+                {/* Father's Section */}
+                <Grid item xs={12} md={6}>
+                  <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Avatar src={guardians.fatherPhoto} variant="rounded" sx={{ width: 65, height: 80, mb: 1, bgcolor: "rgba(255,255,255,0.05)" }} />
+                      <Button variant="text" component="label" sx={{ fontSize: '0.55rem', p: 0 }}>
+                        Upload <input hidden accept="image/*" type="file" onChange={(e) => handleImageUpload(e, "guardians", "fatherPhoto")} />
+                      </Button>
+                    </Box>
+                    <Box sx={{ flexGrow: 1 }}>
+                      <TextField fullWidth label="Father's Name" value={guardians.fatherName} onChange={(e) => setGuardians({ ...guardians, fatherName: e.target.value })} sx={inputStyles} />
+                      <TextField fullWidth label="Father's Occupation" value={guardians.fatherOccupation} onChange={(e) => setGuardians({ ...guardians, fatherOccupation: e.target.value })} sx={inputStyles} />
+                    </Box>
+                  </Stack>
+                  <TextField fullWidth label="Father's Aadhaar" value={guardians.fatherAadhaar} onChange={(e) => setGuardians({ ...guardians, fatherAadhaar: e.target.value })} sx={inputStyles} />
+                  <TextField fullWidth label="Father's License" value={guardians.fatherLicense} onChange={(e) => setGuardians({ ...guardians, fatherLicense: e.target.value })} sx={inputStyles} />
+                  <TextField fullWidth label="Father's Annual Income" value={guardians.fatherAnnualIncome} onChange={(e) => setGuardians({ ...guardians, fatherAnnualIncome: e.target.value })} sx={inputStyles} />
+                </Grid>
+
+                {/* Mother's Section */}
+                <Grid item xs={12} md={6}>
+                  <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Avatar src={guardians.motherPhoto} variant="rounded" sx={{ width: 65, height: 80, mb: 1, bgcolor: "rgba(255,255,255,0.05)" }} />
+                      <Button variant="text" component="label" sx={{ fontSize: '0.55rem', p: 0 }}>
+                        Upload <input hidden accept="image/*" type="file" onChange={(e) => handleImageUpload(e, "guardians", "motherPhoto")} />
+                      </Button>
+                    </Box>
+                    <Box sx={{ flexGrow: 1 }}>
+                      <TextField fullWidth label="Mother's Name" value={guardians.motherName} onChange={(e) => setGuardians({ ...guardians, motherName: e.target.value })} sx={inputStyles} />
+                      <TextField fullWidth label="Mother's Occupation" value={guardians.motherOccupation} onChange={(e) => setGuardians({ ...guardians, motherOccupation: e.target.value })} sx={inputStyles} />
+                    </Box>
+                  </Stack>
+                  <TextField fullWidth label="Mother's Aadhaar" value={guardians.motherAadhaar} onChange={(e) => setGuardians({ ...guardians, motherAadhaar: e.target.value })} sx={inputStyles} />
+                  <TextField fullWidth label="Mother's License" value={guardians.motherLicense} onChange={(e) => setGuardians({ ...guardians, motherLicense: e.target.value })} sx={inputStyles} />
+                  <TextField fullWidth label="Mother's Annual Income" value={guardians.motherAnnualIncome} onChange={(e) => setGuardians({ ...guardians, motherAnnualIncome: e.target.value })} sx={inputStyles} />
+                </Grid>
+              </Grid>
+            </Paper>
 
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
-
               {/* 03 SCHOOLING */}
               <Paper sx={{ flex: "1 1 45%", p: 3, bgcolor: colors.glass, border: `1px solid ${colors.border}`, borderRadius: 0 }}>
                 <Typography variant="overline" color={colors.accent} fontWeight={900}>03 // SCHOOLING</Typography>
@@ -389,7 +443,7 @@ const StudentHistory = () => {
                       onDelete={() => removeSkill(skill)}
                       sx={{
                         bgcolor: "rgba(112,0,255,0.1)", color: colors.accent,
-                        border:  `1px solid ${colors.accent}`, borderRadius: 0,
+                        border: `1px solid ${colors.accent}`, borderRadius: 0,
                         "& .MuiChip-deleteIcon": { color: colors.accent },
                       }} />
                   ))}
@@ -421,7 +475,7 @@ const StudentHistory = () => {
           <Box sx={{ flex: { xs: "1 1 100%", lg: "1 1 32%" } }}>
             <Paper sx={{
               p: 3, bgcolor: colors.glass, border: `1px solid ${colors.border}`,
-              borderRadius: 0, height: "100%", overflowY: "auto", maxHeight: "85vh"
+              borderRadius: 0, height: "100%", overflowY: "auto", maxHeight: "150vh"
             }}>
               <Typography variant="overline" color={colors.accent} fontWeight={900}>
                 05 // ACADEMIC_LEDGER (SEM 1-8)
