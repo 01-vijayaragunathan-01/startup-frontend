@@ -10,16 +10,16 @@ import toast from "react-hot-toast";
 
 import ChatBubbleOutlineIcon  from "@mui/icons-material/ChatBubbleOutline";
 import HistoryEduIcon         from "@mui/icons-material/HistoryEdu";
-import PersonIcon             from "@mui/icons-material/Person";
+import SchoolIcon             from "@mui/icons-material/School";
 import OpenInNewIcon          from "@mui/icons-material/OpenInNew";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import CancelOutlinedIcon     from "@mui/icons-material/CancelOutlined";
 import HourglassEmptyIcon     from "@mui/icons-material/HourglassEmpty";
-import SchoolIcon             from "@mui/icons-material/School";
 import PeopleIcon             from "@mui/icons-material/People";
 import InboxIcon              from "@mui/icons-material/Inbox";
 import StarIcon               from "@mui/icons-material/Star";
 import LinkIcon               from "@mui/icons-material/Link";
+import BookIcon               from "@mui/icons-material/Book";
 import { useUnread }          from "../Context/UnreadContext";
 
 const BASE_URL = "https://startup-backend-1-cj33.onrender.com";
@@ -273,10 +273,22 @@ const Dashboard = () => {
 
         {/* ── QUICK NAV ──────────────────────────────────────────────────── */}
         <Stack direction="row" spacing={2} flexWrap="wrap" justifyContent="center" sx={{ mb: 6 }} data-aos="fade-up">
-          {quickLinks.map((nav) => (
+          {[
+            // Students: Student History + Courses
+            // Mentors: Courses only
+            ...(!isMentor
+              ? [
+                { label: "Student History", to: "/student-history", icon: <HistoryEduIcon /> },
+                { label: "Courses",         to: "/courses",         icon: <BookIcon /> },
+              ]
+              : [
+                { label: "Courses",         to: "/courses",         icon: <BookIcon /> },
+              ]
+            ),
+          ].map((nav) => (
             <Button key={nav.to} component={Link} to={nav.to} variant="outlined" startIcon={nav.icon}
-              sx={{ borderColor: C.border, color: C.accent, borderRadius: "14px", px: 3, py: 1, fontWeight: 700,
-                fontSize: "0.82rem", textTransform: "none", bgcolor: C.white,
+              sx={{ borderColor: C.border, color: C.accent, borderRadius: "14px", px: 3, py: 1,
+                fontWeight: 700, fontSize: "0.82rem", textTransform: "none", bgcolor: C.white,
                 "&:hover": { borderColor: C.accent, bgcolor: C.accentBg } }}>
               {nav.label}
             </Button>
@@ -415,7 +427,7 @@ const Dashboard = () => {
                       const req    = myRequests.find((r) => r.mentor?._id === mentor._id || r.mentor === mentor._id);
                       const status = req?.status || null;
                       return (
-                        <Grid item xs={12} sm={6} key={mentor._id}>
+                        <Grid item xs={12} sm={6} md={4} key={mentor._id}>
                           <MentorCard mentor={mentor} connectionStatus={status} onConnect={handleConnect} />
                         </Grid>
                       );
@@ -465,23 +477,23 @@ const Dashboard = () => {
                 </Paper>
               )}
 
-              {/* Student quick access */}
+              {/* Student quick access — Courses + History only (no profile/messages) */}
               {!isMentor && (
                 <Paper sx={card} data-aos="fade-left">
                   <SectionHead title="Quick Access" />
                   <Stack spacing={1.5}>
-                    <Button fullWidth variant="outlined" component={Link} to="/my-profile"
-                      startIcon={<PersonIcon />}
-                      sx={{ color: C.accent, borderColor: C.border, borderRadius: "12px", fontWeight: 700,
-                        textTransform: "none", justifyContent: "flex-start", px: 2,
-                        "&:hover": { borderColor: C.accent, bgcolor: C.accentBg } }}>
-                      My Profile
-                    </Button>
                     <Button fullWidth variant="contained" component={Link} to="/student-history"
                       startIcon={<HistoryEduIcon />}
                       sx={{ bgcolor: C.accent, borderRadius: "12px", fontWeight: 700, textTransform: "none",
                         justifyContent: "flex-start", px: 2, "&:hover": { bgcolor: C.accentLight } }}>
                       My Student History
+                    </Button>
+                    <Button fullWidth variant="outlined" component={Link} to="/courses"
+                      startIcon={<BookIcon />}
+                      sx={{ color: C.accent, borderColor: C.border, borderRadius: "12px", fontWeight: 700,
+                        textTransform: "none", justifyContent: "flex-start", px: 2,
+                        "&:hover": { borderColor: C.accent, bgcolor: C.accentBg } }}>
+                      My Courses
                     </Button>
                   </Stack>
                 </Paper>

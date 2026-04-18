@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import {
-  AppBar, Toolbar, Button, Box, Typography, Badge, Stack, Avatar, Container, Tooltip,
+  AppBar, Toolbar, Button, Box, Typography, Badge, Stack, Avatar,
+  Container, Tooltip,
 } from "@mui/material";
-import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
-import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
+import SchoolIcon from "@mui/icons-material/School";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useUnread } from "../Context/UnreadContext";
 
@@ -23,7 +23,6 @@ const Navbar = () => {
     bg:          "#ffffff",
     border:      "rgba(21,101,192,0.14)",
     textDim:     "#546e7a",
-    textActive:  "#1565c0",
   };
 
   useEffect(() => {
@@ -39,6 +38,12 @@ const Navbar = () => {
 
   const isActive = (path) => location.pathname === path;
 
+  const navLinks = [
+    { label: "Home",      to: "/" },
+    { label: "Courses",   to: "/courses", icon: <SchoolIcon sx={{ fontSize: 16 }} /> },
+    ...(user ? [{ label: "Dashboard", to: "/dashboard" }] : []),
+  ];
+
   return (
     <AppBar position="fixed" elevation={0} sx={{
       background:   C.bg,
@@ -49,7 +54,7 @@ const Navbar = () => {
       <Container maxWidth="xl">
         <Toolbar disableGutters sx={{ justifyContent: "space-between", minHeight: 64 }}>
 
-          {/* ── Logo ──────────────────────────────────────────────────── */}
+          {/* Logo */}
           <Typography variant="h5" fontWeight={900} onClick={() => navigate("/")}
             sx={{
               cursor: "pointer",
@@ -60,34 +65,25 @@ const Navbar = () => {
             Mentor Mentee
           </Typography>
 
-          {/* ── Nav Links + Actions ───────────────────────────────────── */}
+          {/* Nav + Actions */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Stack direction="row" spacing={0.5} sx={{ display: { xs: "none", md: "flex" } }}>
-              {[
-                { label: "Home",      to: "/" },
-                { label: "Resources", to: "/resources" },
-                ...(user ? [{ label: "Dashboard", to: "/dashboard" }] : []),
-              ].map(({ label, to }) => (
+              {navLinks.map(({ label, to, icon }) => (
                 <Button key={to} component={Link} to={to}
+                  startIcon={icon || undefined}
                   sx={{
-                    color:          isActive(to) ? C.textActive : C.textDim,
-                    textTransform:  "none",
-                    fontWeight:     isActive(to) ? 800 : 600,
-                    fontSize:       "0.88rem",
-                    borderRadius:   "10px",
-                    px:             1.5,
-                    position:       "relative",
-                    "&:hover":      { color: C.accent, bgcolor: "rgba(21,101,192,0.06)" },
-                    // active underline
+                    color:         isActive(to) ? C.accent : C.textDim,
+                    textTransform: "none",
+                    fontWeight:    isActive(to) ? 800 : 600,
+                    fontSize:      "0.88rem",
+                    borderRadius:  "10px",
+                    px:            1.5,
+                    position:      "relative",
+                    "&:hover":     { color: C.accent, bgcolor: "rgba(21,101,192,0.06)" },
                     "&::after": isActive(to) ? {
-                      content:  '""',
-                      position: "absolute",
-                      bottom:   4,
-                      left:     "20%",
-                      width:    "60%",
-                      height:   2,
-                      borderRadius: 2,
-                      bgcolor:  C.accent,
+                      content: '""', position: "absolute", bottom: 4,
+                      left: "20%", width: "60%", height: 2,
+                      borderRadius: 2, bgcolor: C.accent,
                     } : {},
                   }}>
                   {label}
@@ -97,54 +93,48 @@ const Navbar = () => {
 
             {user ? (
               <Stack direction="row" spacing={1.5} alignItems="center">
-
-                {/* ── Chat badge ──────────────────────────────────────── */}
+                {/* Chat badge — clicking goes to chat */}
                 <Tooltip title={totalUnread > 0 ? `${totalUnread} unread message${totalUnread > 1 ? "s" : ""}` : "Messages"}>
-                  <Badge
-                    badgeContent={totalUnread}
-                    color="error"
-                    max={99}
-                    sx={{ "& .MuiBadge-badge": { fontSize: "0.6rem", fontWeight: 800, minWidth: 16, height: 16, p: "0 4px" } }}
-                  >
-                    <Box onClick={() => navigate("/chat")}
-                      sx={{
-                        width: 36, height: 36, borderRadius: "10px", cursor: "pointer",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        bgcolor: totalUnread > 0 ? "rgba(21,101,192,0.1)" : "transparent",
-                        transition: "all 0.2s",
-                        animation: totalUnread > 0 ? "pulseChat 2s infinite" : "none",
-                        "&:hover": { bgcolor: "rgba(21,101,192,0.12)" },
-                      }}>
-                      <ChatBubbleOutlineIcon sx={{ color: C.accent, fontSize: 20 }} />
+                  <Badge badgeContent={totalUnread} color="error" max={99}
+                    sx={{ "& .MuiBadge-badge": { fontSize: "0.6rem", fontWeight: 800 } }}
+                    onClick={() => navigate("/chat")}
+                    style={{ cursor: "pointer" }}>
+                    <Box sx={{
+                      width: 36, height: 36, borderRadius: "10px",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      bgcolor: totalUnread > 0 ? "rgba(21,101,192,0.1)" : "transparent",
+                      animation: totalUnread > 0 ? "pulseChat 2s infinite" : "none",
+                      "&:hover": { bgcolor: "rgba(21,101,192,0.1)" },
+                    }}>
+                      {/* Chat icon via emoji for simplicity */}
+                      <Typography sx={{ fontSize: 18 }}>💬</Typography>
                     </Box>
                   </Badge>
                 </Tooltip>
 
-                {/* ── Notification bell (general) ─────────────────────── */}
-                <Tooltip title="Notifications">
-                  <Box sx={{
-                    width: 36, height: 36, borderRadius: "10px", cursor: "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    "&:hover": { bgcolor: "rgba(21,101,192,0.08)" },
-                  }}>
-                    <NotificationsNoneIcon sx={{ color: C.textDim, fontSize: 20 }} />
-                  </Box>
-                </Tooltip>
-
-                {/* ── Avatar ──────────────────────────────────────────── */}
-                <Tooltip title={user.name}>
-                  <Avatar onClick={() => navigate("/my-profile")}
+                {/* Profile avatar — navigates to /my-profile */}
+                <Tooltip title={`${user.name} — Edit Profile`}>
+                  <Avatar
                     src={user.avatar}
-                    sx={{ bgcolor: C.accent, width: 34, height: 34, fontSize: 13, fontWeight: 900, cursor: "pointer",
-                      border: `2px solid ${C.border}`, "&:hover": { borderColor: C.accent } }}>
+                    onClick={() => navigate("/my-profile")}
+                    sx={{
+                      bgcolor:    C.accent, width: 36, height: 36, fontSize: 14,
+                      fontWeight: 900, cursor: "pointer",
+                      border:     `2px solid ${C.border}`,
+                      transition: "all 0.2s",
+                      "&:hover":  { borderColor: C.accent, transform: "scale(1.08)" },
+                    }}>
                     {user?.name?.[0]?.toUpperCase() ?? "?"}
                   </Avatar>
                 </Tooltip>
 
-                {/* ── Logout ──────────────────────────────────────────── */}
+                {/* Logout */}
                 <Button onClick={handleLogout} variant="outlined" size="small"
-                  sx={{ color: C.accent, borderColor: C.border, textTransform: "none", fontWeight: 700, borderRadius: "10px",
-                    "&:hover": { bgcolor: C.accent, color: "#fff", borderColor: C.accent } }}>
+                  sx={{
+                    color: C.accent, borderColor: C.border, textTransform: "none",
+                    fontWeight: 700, borderRadius: "10px",
+                    "&:hover": { bgcolor: C.accent, color: "#fff", borderColor: C.accent },
+                  }}>
                   Logout
                 </Button>
               </Stack>
@@ -159,11 +149,10 @@ const Navbar = () => {
         </Toolbar>
       </Container>
 
-      {/* Pulse animation for chat badge */}
       <style>{`
         @keyframes pulseChat {
           0%, 100% { transform: scale(1); }
-          50%       { transform: scale(1.08); }
+          50%       { transform: scale(1.1); }
         }
       `}</style>
     </AppBar>

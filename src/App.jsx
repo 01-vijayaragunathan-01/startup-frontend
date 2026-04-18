@@ -18,7 +18,7 @@ import MarketTrends from "./Pages/MarketTrends";
 import AddResource from "./Pages/AddResource";
 import StudentHistory from "./Pages/StudentHistory";
 import StudentProfileView from "./Pages/StudentProfileView";
-// import ProfileUpdate from "./Pages/ProfileUpdate";
+import Courses from "./Pages/Courses";
 
 
 const App = () => {
@@ -51,6 +51,7 @@ const App = () => {
         <Route path="/student-history" element={<StudentHistory />} />
         <Route path="/student-history/:studentId" element={<StudentHistory />} />  {/* mentor view */}
         <Route path="/student-profile/:studentId" element={<StudentProfileView />} />
+        <Route path="/courses" element={<Courses />} />
       </Routes>
       <Footer />
     </div>
