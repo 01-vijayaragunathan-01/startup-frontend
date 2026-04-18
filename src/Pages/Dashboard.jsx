@@ -1,6 +1,6 @@
 import {
   Box, Typography, Grid, List, ListItem, ListItemText, Avatar, Chip,
-  Button, Container, Paper, Stack, Divider, Tooltip, Badge,
+  Button, Container, Paper, Stack, Divider, Tooltip, CircularProgress,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -13,11 +13,13 @@ import HistoryEduIcon         from "@mui/icons-material/HistoryEdu";
 import PersonIcon             from "@mui/icons-material/Person";
 import OpenInNewIcon          from "@mui/icons-material/OpenInNew";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import CancelOutlinedIcon     from "@mui/icons-material/CancelOutlined";
 import HourglassEmptyIcon     from "@mui/icons-material/HourglassEmpty";
 import SchoolIcon             from "@mui/icons-material/School";
 import PeopleIcon             from "@mui/icons-material/People";
 import InboxIcon              from "@mui/icons-material/Inbox";
 import StarIcon               from "@mui/icons-material/Star";
+import LinkIcon               from "@mui/icons-material/Link";
 
 const BASE_URL = "https://startup-backend-1-cj33.onrender.com";
 
@@ -32,6 +34,8 @@ const C = {
   dark:        "#1a237e",
   success:     "#2e7d32",
   successBg:   "rgba(46,125,50,0.08)",
+  danger:      "#c62828",
+  dangerBg:    "rgba(198,40,40,0.07)",
 };
 
 const card = {
@@ -40,11 +44,10 @@ const card = {
   borderRadius: "20px",
   p:            3,
   boxShadow:    "0 4px 24px rgba(21,101,192,0.07)",
-  transition:   "border-color 0.2s, box-shadow 0.2s",
 };
 
-// ── Inline Mentor Card ────────────────────────────────────────────────────────
-const MentorCard = ({ mentor, mentorshipStatus, onRequest }) => (
+// ── Mentor Card (Student view) ────────────────────────────────────────────────
+const MentorCard = ({ mentor, connectionStatus, onConnect }) => (
   <Box sx={{ ...card, display: "flex", flexDirection: "column", gap: 1.5, height: "100%" }}>
     <Stack direction="row" spacing={2} alignItems="center">
       <Avatar src={mentor.avatar}
@@ -86,28 +89,29 @@ const MentorCard = ({ mentor, mentorshipStatus, onRequest }) => (
         View Profile
       </Button>
 
-      {mentorshipStatus === "pending" ? (
+      {connectionStatus === "pending" ? (
         <Button fullWidth variant="outlined" disabled startIcon={<HourglassEmptyIcon sx={{ fontSize: "0.75rem" }} />}
           sx={{ borderRadius: "10px", fontSize: "0.7rem", textTransform: "none" }}>
           Request Sent
         </Button>
-      ) : mentorshipStatus === "accepted" ? (
-        <Button fullWidth variant="outlined" disabled startIcon={<CheckCircleOutlineIcon sx={{ fontSize: "0.75rem" }} />}
+      ) : connectionStatus === "accepted" ? (
+        <Button fullWidth variant="outlined" disabled startIcon={<LinkIcon sx={{ fontSize: "0.75rem" }} />}
           sx={{ borderColor: C.success, color: C.success, borderRadius: "10px", fontSize: "0.7rem", textTransform: "none" }}>
           Connected
         </Button>
       ) : (
-        <Button fullWidth variant="outlined" onClick={() => onRequest(mentor._id)}
+        <Button fullWidth variant="outlined" onClick={() => onConnect(mentor._id)}
+          startIcon={<LinkIcon sx={{ fontSize: "0.75rem" }} />}
           sx={{ borderColor: C.accent, color: C.accent, borderRadius: "10px", fontWeight: 700, fontSize: "0.7rem",
             textTransform: "none", "&:hover": { bgcolor: C.accentBg } }}>
-          Request Mentorship
+          Connect
         </Button>
       )}
     </Stack>
   </Box>
 );
 
-// ── Section Header ────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 const SectionHead = ({ title, count }) => (
   <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
     <Typography variant="h6" fontWeight={800} color={C.dark}>{title}</Typography>
@@ -118,7 +122,6 @@ const SectionHead = ({ title, count }) => (
   </Stack>
 );
 
-// ── Empty State ───────────────────────────────────────────────────────────────
 const Empty = ({ text }) => (
   <Stack alignItems="center" spacing={1} sx={{ py: 4 }}>
     <InboxIcon sx={{ fontSize: 40, color: C.border }} />
@@ -128,12 +131,13 @@ const Empty = ({ text }) => (
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 const Dashboard = () => {
-  const [studentRequests,    setStudentRequests]    = useState([]);
-  const [mentorProfile,      setMentorProfile]      = useState(null);
-  const [mentors,            setMentors]            = useState([]);
-  const [myRequests,         setMyRequests]         = useState([]);
-  const [recentChats,        setRecentChats]        = useState([]);
-  const [connectedStudents,  setConnectedStudents]  = useState([]);
+  const [studentRequests,   setStudentRequests]   = useState([]);
+  const [mentorProfile,     setMentorProfile]     = useState(null);
+  const [mentors,           setMentors]           = useState([]);
+  const [myRequests,        setMyRequests]        = useState([]);
+  const [recentChats,       setRecentChats]       = useState([]);
+  const [connectedStudents, setConnectedStudents] = useState([]);
+  const [responding,        setResponding]        = useState({}); // { [requestId]: bool }
 
   const user        = JSON.parse(localStorage.getItem("user") || "{}");
   const token       = localStorage.getItem("token");
@@ -171,33 +175,66 @@ const Dashboard = () => {
     fetchData();
   }, []); // eslint-disable-line
 
-  const handleRequest = async (mentorId) => {
+  // ── Student: send connection request ──────────────────────────────────────
+  const handleConnect = async (mentorId) => {
     try {
       await axios.post(`${BASE_URL}/api/mentorship/request`, { mentorId }, { headers: authHeaders });
-      toast.success("Request sent!");
+      toast.success("Connection request sent!");
       setMyRequests((p) => [...p, { mentor: { _id: mentorId }, status: "pending" }]);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to send request.");
     }
   };
 
+  // ── Mentor: accept or reject a connection request ────────────────────────
+  const handleRespond = async (requestId, status) => {
+    setResponding((p) => ({ ...p, [requestId]: true }));
+    try {
+      await axios.put(
+        `${BASE_URL}/api/mentorship/respond/${requestId}`,
+        { status },
+        { headers: authHeaders }
+      );
+      toast.success(status === "accepted" ? "✅ Connection accepted!" : "Connection declined.");
+
+      // Update local state immediately
+      setStudentRequests((prev) =>
+        prev.map((r) => (r._id === requestId ? { ...r, status } : r))
+      );
+
+      // If accepted, add to connected students list
+      if (status === "accepted") {
+        const accepted = studentRequests.find((r) => r._id === requestId);
+        if (accepted?.student) {
+          setConnectedStudents((prev) => [...prev, accepted.student]);
+        }
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to respond.");
+    } finally {
+      setResponding((p) => ({ ...p, [requestId]: false }));
+    }
+  };
+
+  const pendingRequests  = studentRequests.filter((r) => r.status === "pending");
+  const acceptedRequests = studentRequests.filter((r) => r.status === "accepted");
+
   const statCards = isMentor
     ? [
-      { label: "Pending Requests",   value: studentRequests.length,   icon: <PeopleIcon />,             color: C.accent },
-      { label: "Connected Students", value: connectedStudents.length,  icon: <SchoolIcon />,             color: "#0d47a1" },
-      { label: "Recent Chats",       value: recentChats.length,        icon: <ChatBubbleOutlineIcon />,  color: C.accentLight },
+      { label: "Pending Connections",   value: pendingRequests.length,    icon: <PeopleIcon />,            color: C.accent },
+      { label: "Connected Students",    value: connectedStudents.length,  icon: <SchoolIcon />,            color: "#0d47a1" },
+      { label: "Recent Chats",          value: recentChats.length,        icon: <ChatBubbleOutlineIcon />, color: C.accentLight },
     ]
     : [
-      { label: "Available Mentors",  value: mentors.length,            icon: <PeopleIcon />,             color: C.accent },
-      { label: "My Requests",        value: myRequests.length,         icon: <SchoolIcon />,             color: "#0d47a1" },
-      { label: "Recent Chats",       value: recentChats.length,        icon: <ChatBubbleOutlineIcon />,  color: C.accentLight },
+      { label: "Available Mentors",     value: mentors.length,            icon: <PeopleIcon />,            color: C.accent },
+      { label: "My Connections",        value: myRequests.length,         icon: <SchoolIcon />,            color: "#0d47a1" },
+      { label: "Recent Chats",          value: recentChats.length,        icon: <ChatBubbleOutlineIcon />, color: C.accentLight },
     ];
 
-  // Quick nav — students see Student History, mentors do NOT
   const quickLinks = [
-    { label: "My Profile",      to: "/my-profile",       icon: <PersonIcon /> },
+    { label: "My Profile",      to: "/my-profile",      icon: <PersonIcon /> },
     ...(!isMentor ? [{ label: "Student History", to: "/student-history", icon: <HistoryEduIcon /> }] : []),
-    { label: "Messages",        to: "/chat",             icon: <ChatBubbleOutlineIcon /> },
+    { label: "Messages",        to: "/chat",            icon: <ChatBubbleOutlineIcon /> },
   ];
 
   return (
@@ -211,7 +248,7 @@ const Dashboard = () => {
           </Typography>
           <Typography variant="body1" color={C.textDim} sx={{ mt: 1 }}>
             Welcome back, <strong style={{ color: C.accent }}>{user?.name}</strong>.{" "}
-            {isMentor ? "Manage your mentees and profile." : "Explore experts and grow your skills."}
+            {isMentor ? "Manage your connections and mentees." : "Connect with experts and grow your skills."}
           </Typography>
         </Box>
 
@@ -247,43 +284,58 @@ const Dashboard = () => {
         {/* ── MAIN GRID ──────────────────────────────────────────────────── */}
         <Grid container spacing={4}>
 
-          {/* ── LEFT: Main content ─────────────────────────────────────── */}
+          {/* ── LEFT ───────────────────────────────────────────────────── */}
           <Grid item xs={12} lg={8}>
 
-            {/* MENTOR: Student requests */}
+            {/* ══ MENTOR: Pending Connection Requests ═══════════════════ */}
             {isMentor && (
               <Paper sx={{ ...card, mb: 4 }} data-aos="fade-up">
-                <SectionHead title="Student Requests" count={studentRequests.length} />
-                {studentRequests.length === 0 ? (
-                  <Empty text="No pending requests." />
+                <SectionHead title="Connection Requests" count={pendingRequests.length} />
+                {pendingRequests.length === 0 ? (
+                  <Empty text="No pending connection requests." />
                 ) : (
-                  <Stack spacing={1.5}>
-                    {studentRequests.map((req, i) => (
-                      <Box key={i} sx={{
+                  <Stack spacing={2}>
+                    {pendingRequests.map((req) => (
+                      <Box key={req._id} sx={{
                         display: "flex", alignItems: "center", gap: 2,
-                        p: 2, bgcolor: C.accentBg, borderRadius: "14px", border: `1px solid ${C.border}`,
-                        flexWrap: "wrap",
+                        p: 2, bgcolor: C.accentBg, borderRadius: "14px",
+                        border: `1px solid ${C.border}`, flexWrap: "wrap",
                       }}>
-                        <Avatar src={req.student?.avatar} sx={{ bgcolor: C.accent, width: 42, height: 42, fontWeight: 900 }}>
+                        <Avatar src={req.student?.avatar}
+                          sx={{ bgcolor: C.accent, width: 44, height: 44, fontWeight: 900 }}>
                           {req.student?.name?.[0]}
                         </Avatar>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography fontWeight={800} color={C.dark} fontSize="0.9rem" noWrap>{req.student?.name}</Typography>
-                          <Typography variant="caption" color={C.textDim} noWrap>{req.student?.email}</Typography>
+                          <Typography fontWeight={800} color={C.dark} fontSize="0.9rem" noWrap>
+                            {req.student?.name}
+                          </Typography>
+                          <Typography variant="caption" color={C.textDim} noWrap>
+                            {req.student?.email} · wants to connect with you
+                          </Typography>
                         </Box>
-                        <Chip label={req.status} size="small"
-                          sx={{
-                            bgcolor: req.status === "accepted" ? C.successBg : C.accentBg,
-                            color:   req.status === "accepted" ? C.success : C.accent,
-                            border:  `1px solid ${req.status === "accepted" ? C.success : C.border}`,
-                            fontWeight: 800, textTransform: "capitalize",
-                          }} />
-                        <Button variant="contained" size="small"
-                          onClick={() => navigate("/chat", { state: { receiverId: req.student._id, receiverName: req.student.name } })}
-                          sx={{ bgcolor: C.accent, borderRadius: "10px", textTransform: "none", fontWeight: 700, fontSize: "0.72rem",
-                            "&:hover": { bgcolor: C.accentLight } }}>
-                          Chat
-                        </Button>
+
+                        {/* Accept / Decline */}
+                        <Stack direction="row" spacing={1} flexShrink={0}>
+                          <Button variant="contained" size="small"
+                            disabled={responding[req._id]}
+                            onClick={() => handleRespond(req._id, "accepted")}
+                            startIcon={responding[req._id]
+                              ? <CircularProgress size={12} color="inherit" />
+                              : <CheckCircleOutlineIcon sx={{ fontSize: "0.85rem" }} />
+                            }
+                            sx={{ bgcolor: C.success, borderRadius: "10px", textTransform: "none", fontWeight: 700,
+                              fontSize: "0.72rem", "&:hover": { bgcolor: "#1b5e20" } }}>
+                            Accept
+                          </Button>
+                          <Button variant="outlined" size="small"
+                            disabled={responding[req._id]}
+                            onClick={() => handleRespond(req._id, "rejected")}
+                            startIcon={<CancelOutlinedIcon sx={{ fontSize: "0.85rem" }} />}
+                            sx={{ borderColor: C.danger, color: C.danger, borderRadius: "10px", textTransform: "none",
+                              fontWeight: 700, fontSize: "0.72rem", "&:hover": { bgcolor: C.dangerBg } }}>
+                            Decline
+                          </Button>
+                        </Stack>
                       </Box>
                     ))}
                   </Stack>
@@ -291,41 +343,50 @@ const Dashboard = () => {
               </Paper>
             )}
 
-            {/* MENTOR: Connected students (with "View History" link) */}
+            {/* ══ MENTOR: Connected Students ════════════════════════════ */}
             {isMentor && (
               <Paper sx={{ ...card }} data-aos="fade-up">
                 <SectionHead title="Connected Students" count={connectedStudents.length} />
                 {connectedStudents.length === 0 ? (
-                  <Empty text="No connected students yet. Students will appear here once they accept connection." />
+                  <Empty text="No connected students yet. Accept a connection request to get started." />
                 ) : (
                   <Stack spacing={1.5}>
                     {connectedStudents.map((student, i) => (
                       <Box key={i} sx={{
                         display: "flex", alignItems: "center", gap: 2,
-                        p: 2, bgcolor: C.accentBg, borderRadius: "14px", border: `1px solid ${C.border}`,
-                        flexWrap: "wrap",
+                        p: 2, bgcolor: C.successBg, borderRadius: "14px",
+                        border: "1px solid rgba(46,125,50,0.15)", flexWrap: "wrap",
                       }}>
-                        <Avatar src={student.avatar} sx={{ bgcolor: C.accent, width: 42, height: 42, fontWeight: 900 }}>
+                        <Avatar src={student.avatar}
+                          sx={{ bgcolor: C.accent, width: 44, height: 44, fontWeight: 900 }}>
                           {student.name?.[0]?.toUpperCase()}
                         </Avatar>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography fontWeight={800} color={C.dark} fontSize="0.9rem" noWrap>{student.name || "Unknown"}</Typography>
-                          <Typography variant="caption" color={C.textDim} noWrap>{student.department || student.email}</Typography>
+                          <Stack direction="row" alignItems="center" spacing={1}>
+                            <Typography fontWeight={800} color={C.dark} fontSize="0.9rem" noWrap>
+                              {student.name || "Unknown"}
+                            </Typography>
+                            <CheckCircleOutlineIcon sx={{ fontSize: 14, color: C.success }} />
+                          </Stack>
+                          <Typography variant="caption" color={C.textDim} noWrap>
+                            {student.department || student.email}
+                          </Typography>
                         </Box>
-                        <Stack direction="row" spacing={1}>
+                        <Stack direction="row" spacing={1} flexShrink={0}>
                           <Tooltip title="View Academic History">
                             <Button variant="outlined" size="small"
                               startIcon={<HistoryEduIcon sx={{ fontSize: "0.8rem" }} />}
                               onClick={() => navigate(`/student-history/${student._id}`)}
-                              sx={{ borderColor: C.border, color: C.accent, borderRadius: "10px", textTransform: "none",
-                                fontWeight: 700, fontSize: "0.72rem", "&:hover": { borderColor: C.accent, bgcolor: C.accentBg } }}>
-                              View History
+                              sx={{ borderColor: C.border, color: C.accent, borderRadius: "10px",
+                                textTransform: "none", fontWeight: 700, fontSize: "0.72rem",
+                                "&:hover": { borderColor: C.accent, bgcolor: C.accentBg } }}>
+                              History
                             </Button>
                           </Tooltip>
                           <Button variant="contained" size="small"
                             onClick={() => navigate("/chat", { state: { receiverId: student._id, receiverName: student.name } })}
-                            sx={{ bgcolor: C.accent, borderRadius: "10px", textTransform: "none", fontWeight: 700, fontSize: "0.72rem",
-                              "&:hover": { bgcolor: C.accentLight } }}>
+                            sx={{ bgcolor: C.accent, borderRadius: "10px", textTransform: "none",
+                              fontWeight: 700, fontSize: "0.72rem", "&:hover": { bgcolor: C.accentLight } }}>
                             Chat
                           </Button>
                         </Stack>
@@ -336,11 +397,11 @@ const Dashboard = () => {
               </Paper>
             )}
 
-            {/* STUDENT: Explore Mentors */}
+            {/* ══ STUDENT: Explore Mentors ══════════════════════════════ */}
             {!isMentor && (
               <Box data-aos="fade-up">
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-                  <Typography variant="h6" fontWeight={800} color={C.dark}>Explore Mentors</Typography>
+                  <Typography variant="h6" fontWeight={800} color={C.dark}>Find a Mentor</Typography>
                   <Chip label={`${mentors.length} available`} size="small"
                     sx={{ bgcolor: C.accentBg, color: C.accent, border: `1px solid ${C.border}`, fontWeight: 700 }} />
                 </Stack>
@@ -349,10 +410,11 @@ const Dashboard = () => {
                 ) : (
                   <Grid container spacing={3}>
                     {mentors.map((mentor) => {
-                      const status = myRequests.find((r) => r.mentor._id === mentor._id)?.status || null;
+                      const req    = myRequests.find((r) => r.mentor?._id === mentor._id || r.mentor === mentor._id);
+                      const status = req?.status || null;
                       return (
                         <Grid item xs={12} sm={6} key={mentor._id}>
-                          <MentorCard mentor={mentor} mentorshipStatus={status} onRequest={handleRequest} />
+                          <MentorCard mentor={mentor} connectionStatus={status} onConnect={handleConnect} />
                         </Grid>
                       );
                     })}
@@ -362,11 +424,11 @@ const Dashboard = () => {
             )}
           </Grid>
 
-          {/* ── RIGHT: Sidebar ─────────────────────────────────────────── */}
+          {/* ── RIGHT SIDEBAR ──────────────────────────────────────────── */}
           <Grid item xs={12} lg={4}>
             <Stack spacing={4}>
 
-              {/* Mentor's own profile mini-card */}
+              {/* Mentor own profile mini-card */}
               {isMentor && mentorProfile && (
                 <Paper sx={{ ...card, p: 0, overflow: "hidden" }} data-aos="fade-left">
                   <Box sx={{
@@ -377,11 +439,13 @@ const Dashboard = () => {
                   }} />
                   <Box sx={{ p: 3, pt: 0, textAlign: "center", mt: -6 }}>
                     <Avatar src={mentorProfile.avatar}
-                      sx={{ width: 80, height: 80, mx: "auto", border: `4px solid ${C.white}`, bgcolor: C.accent, boxShadow: "0 4px 16px rgba(21,101,192,0.3)", fontWeight: 900 }}>
+                      sx={{ width: 80, height: 80, mx: "auto", border: `4px solid ${C.white}`, bgcolor: C.accent,
+                        boxShadow: "0 4px 16px rgba(21,101,192,0.3)", fontWeight: 900 }}>
                       {mentorProfile.name?.[0]?.toUpperCase()}
                     </Avatar>
                     <Typography variant="h6" fontWeight={900} color={C.dark} mt={1}>{mentorProfile.name}</Typography>
-                    <Chip label="MENTOR" size="small" sx={{ bgcolor: C.accentBg, color: C.accent, fontWeight: 800, mt: 0.5, borderRadius: "8px" }} />
+                    <Chip label="MENTOR" size="small"
+                      sx={{ bgcolor: C.accentBg, color: C.accent, fontWeight: 800, mt: 0.5, borderRadius: "8px" }} />
                     <Box mt={1.5} display="flex" flexWrap="wrap" justifyContent="center" gap={0.5}>
                       {mentorProfile.expertise?.slice(0, 4).map((s, i) => (
                         <Chip key={i} label={s} size="small"
@@ -394,24 +458,25 @@ const Dashboard = () => {
                           textTransform: "none", "&:hover": { borderColor: C.accent, bgcolor: C.accentBg } }}>
                         Edit Profile
                       </Button>
-                      {/* NOTE: No Student History link for mentors */}
                     </Stack>
                   </Box>
                 </Paper>
               )}
 
-              {/* Student: quick access */}
+              {/* Student quick access */}
               {!isMentor && (
                 <Paper sx={card} data-aos="fade-left">
                   <SectionHead title="Quick Access" />
                   <Stack spacing={1.5}>
-                    <Button fullWidth variant="outlined" component={Link} to="/my-profile" startIcon={<PersonIcon />}
+                    <Button fullWidth variant="outlined" component={Link} to="/my-profile"
+                      startIcon={<PersonIcon />}
                       sx={{ color: C.accent, borderColor: C.border, borderRadius: "12px", fontWeight: 700,
                         textTransform: "none", justifyContent: "flex-start", px: 2,
                         "&:hover": { borderColor: C.accent, bgcolor: C.accentBg } }}>
                       My Profile
                     </Button>
-                    <Button fullWidth variant="contained" component={Link} to="/student-history" startIcon={<HistoryEduIcon />}
+                    <Button fullWidth variant="contained" component={Link} to="/student-history"
+                      startIcon={<HistoryEduIcon />}
                       sx={{ bgcolor: C.accent, borderRadius: "12px", fontWeight: 700, textTransform: "none",
                         justifyContent: "flex-start", px: 2, "&:hover": { bgcolor: C.accentLight } }}>
                       My Student History
@@ -432,7 +497,8 @@ const Dashboard = () => {
                         sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 1.2, borderRadius: "12px", cursor: "pointer",
                           "&:hover": { bgcolor: C.accentBg } }}
                         onClick={() => navigate("/chat", { state: { receiverId: person._id, receiverName: person.name } })}>
-                        <Avatar src={person.avatar} sx={{ width: 36, height: 36, bgcolor: C.accent, fontWeight: 900, fontSize: 14 }}>
+                        <Avatar src={person.avatar}
+                          sx={{ width: 36, height: 36, bgcolor: C.accent, fontWeight: 900, fontSize: 14 }}>
                           {person.name?.[0]?.toUpperCase()}
                         </Avatar>
                         <Typography variant="body2" fontWeight={600} color={C.dark}>{person.name}</Typography>
@@ -443,21 +509,57 @@ const Dashboard = () => {
                 )}
               </Paper>
 
-              {/* Student: accepted mentors */}
+              {/* Student: connected mentors */}
               {!isMentor && myRequests.some((r) => r.status === "accepted") && (
                 <Paper sx={card} data-aos="fade-left">
-                  <SectionHead title="Your Mentors" />
+                  <SectionHead title="Your Connections" />
                   <Stack spacing={1}>
                     {myRequests.filter((r) => r.status === "accepted").map((req, i) => (
-                      <Box key={i} sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 1.5, bgcolor: C.successBg,
-                        border: `1px solid rgba(46,125,50,0.15)`, borderRadius: "12px" }}>
-                        <CheckCircleOutlineIcon sx={{ color: C.success, fontSize: 18 }} />
-                        <Typography fontWeight={700} color={C.dark} fontSize="0.88rem" flex={1}>{req.mentor.name}</Typography>
+                      <Box key={i} sx={{
+                        display: "flex", alignItems: "center", gap: 1.5, p: 1.5,
+                        bgcolor: C.successBg, border: "1px solid rgba(46,125,50,0.15)", borderRadius: "12px",
+                      }}>
+                        <Avatar src={req.mentor?.avatar}
+                          sx={{ width: 36, height: 36, bgcolor: C.accent, fontSize: 14, fontWeight: 900 }}>
+                          {req.mentor?.name?.[0]?.toUpperCase()}
+                        </Avatar>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography fontWeight={700} color={C.dark} fontSize="0.88rem" noWrap>
+                            {req.mentor?.name}
+                          </Typography>
+                          <Stack direction="row" alignItems="center" spacing={0.5}>
+                            <CheckCircleOutlineIcon sx={{ fontSize: 12, color: C.success }} />
+                            <Typography variant="caption" color={C.success} fontWeight={700}>Connected</Typography>
+                          </Stack>
+                        </Box>
                         <Button variant="text" size="small"
                           onClick={() => navigate("/chat", { state: { receiverId: req.mentor._id, receiverName: req.mentor.name } })}
-                          sx={{ color: C.accent, textTransform: "none", fontWeight: 700, fontSize: "0.75rem" }}>
+                          sx={{ color: C.accent, textTransform: "none", fontWeight: 700, fontSize: "0.75rem", flexShrink: 0 }}>
                           Chat
                         </Button>
+                      </Box>
+                    ))}
+                  </Stack>
+                </Paper>
+              )}
+
+              {/* Student: pending connections summary */}
+              {!isMentor && myRequests.some((r) => r.status === "pending") && (
+                <Paper sx={card} data-aos="fade-left">
+                  <SectionHead title="Pending Requests" />
+                  <Stack spacing={1}>
+                    {myRequests.filter((r) => r.status === "pending").map((req, i) => (
+                      <Box key={i} sx={{
+                        display: "flex", alignItems: "center", gap: 1.5, p: 1.5,
+                        bgcolor: C.accentBg, border: `1px solid ${C.border}`, borderRadius: "12px",
+                      }}>
+                        <HourglassEmptyIcon sx={{ color: C.textDim, fontSize: 18 }} />
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography fontWeight={700} color={C.dark} fontSize="0.85rem" noWrap>
+                            {req.mentor?.name}
+                          </Typography>
+                          <Typography variant="caption" color={C.textDim}>Awaiting mentor response</Typography>
+                        </Box>
                       </Box>
                     ))}
                   </Stack>

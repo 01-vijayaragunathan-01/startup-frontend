@@ -183,7 +183,7 @@ const MentorProfile = () => {
                       boxShadow: "0 4px 20px rgba(21,101,192,0.3)",
                       "&:hover": { bgcolor: C.accentAlt, transform: "translateY(-2px)" }, transition: "all 0.2s",
                     }}>
-                    {sending ? "Sending…" : "Request Mentorship"}
+                    {sending ? "Sending…" : "Connect"}
                   </Button>
                 )
               )}
