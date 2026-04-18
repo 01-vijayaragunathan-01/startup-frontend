@@ -233,11 +233,8 @@ const Dashboard = () => {
       { label: "Recent Chats",          value: recentChats.length,        icon: <ChatBubbleOutlineIcon />, color: C.accentLight },
     ];
 
-  const quickLinks = [
-    { label: "My Profile",      to: "/my-profile",      icon: <PersonIcon /> },
-    ...(!isMentor ? [{ label: "Student History", to: "/student-history", icon: <HistoryEduIcon /> }] : []),
-    { label: "Messages",        to: "/chat",            icon: <ChatBubbleOutlineIcon /> },
-  ];
+
+
 
   return (
     <Box sx={{ minHeight: "100vh", py: 12, px: { xs: 2, md: 4 }, bgcolor: C.bg }}>
