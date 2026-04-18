@@ -2,11 +2,10 @@ import {
   Box, Typography, Grid, Avatar, Chip, Button, Container,
   Paper, Stack, Divider, Tooltip, CircularProgress, TextField, IconButton,
 } from "@mui/material";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
-import { io } from "socket.io-client";
 
 import ChatBubbleOutlineIcon  from "@mui/icons-material/ChatBubbleOutline";
 import HistoryEduIcon         from "@mui/icons-material/HistoryEdu";
@@ -19,13 +18,10 @@ import InboxIcon              from "@mui/icons-material/Inbox";
 import StarIcon               from "@mui/icons-material/Star";
 import LinkIcon               from "@mui/icons-material/Link";
 import OpenInNewIcon          from "@mui/icons-material/OpenInNew";
-import SendIcon               from "@mui/icons-material/Send";
 import SearchIcon             from "@mui/icons-material/Search";
-import ArrowBackIcon          from "@mui/icons-material/ArrowBack";
 import { useUnread }          from "../Context/UnreadContext";
 
 const BASE_URL = "https://startup-backend-1-cj33.onrender.com";
-const socket   = io(BASE_URL, { transports: ["websocket"] });
 
 /* ── tokens ─────────────────────────────────────────────────────────────── */
 const C = {
@@ -140,86 +136,25 @@ const MentorCard = ({ mentor, status, onConnect }) => (
 );
 
 /* ════════════════════════════════════════════════════════════════════════════
-   EMBEDDED CHAT PANEL  (right column)
-   • Left strip  — contact list with search + unread badges
-   • Right area  — messages + input for the selected contact
+   CHAT PANEL — contact list only, clicking navigates to full /chat page
 ════════════════════════════════════════════════════════════════════════════ */
-const ChatPanel = ({ contacts, user, token }) => {
+const ChatPanel = ({ contacts, navigate }) => {
   const { unreadBySender, markRead } = useUnread();
-
-  const [selected,    setSelected]    = useState(null);   // { _id, name, avatar }
-  const [messages,    setMessages]    = useState([]);
-  const [input,       setInput]       = useState("");
-  const [loadingMsgs, setLoadingMsgs] = useState(false);
-  const [search,      setSearch]      = useState("");
-  const scrollRef = useRef(null);
-  const authH     = { Authorization: `Bearer ${token}` };
-
-  // join socket room
-  useEffect(() => {
-    if (user?._id) socket.emit("join", user._id);
-  }, [user?._id]);
-
-  // real-time incoming messages
-  useEffect(() => {
-    const handler = (msg) => {
-      const sid = typeof msg.sender === "object" ? msg.sender._id : msg.sender;
-      if (selected && String(sid) === String(selected._id)) {
-        setMessages((p) => [...p, msg]);
-      }
-    };
-    socket.on("receiveMessage", handler);
-    return () => socket.off("receiveMessage", handler);
-  }, [selected]);
-
-  // scroll to bottom when messages change
-  useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages]);
-
-  // load messages when contact selected
-  const selectContact = async (contact) => {
-    setSelected(contact);
-    markRead(contact._id);
-    setLoadingMsgs(true);
-    try {
-      const res = await axios.get(`${BASE_URL}/api/messages/${contact._id}`, { headers: authH });
-      setMessages(res.data || []);
-    } catch {
-      toast.error("Failed to load messages");
-    } finally {
-      setLoadingMsgs(false);
-    }
-  };
-
-  const sendMsg = async () => {
-    const txt = input.trim();
-    if (!txt || !selected) return;
-    const optimistic = { sender: user._id, receiver: selected._id, text: txt, timestamp: new Date().toISOString() };
-    setMessages((p) => [...p, optimistic]);
-    setInput("");
-    socket.emit("sendMessage", optimistic);
-    try {
-      await axios.post(`${BASE_URL}/api/messages`, { receiver: selected._id, text: txt }, { headers: authH });
-    } catch { toast.error("Send failed"); }
-  };
-
-  const isMe = (msg) => {
-    const sid = typeof msg.sender === "object" ? msg.sender._id : msg.sender;
-    return String(sid) === String(user?._id);
-  };
-
+  const [search, setSearch] = useState("");
   const filtered = contacts.filter((c) => c?.name?.toLowerCase().includes(search.toLowerCase()));
-
   const totalUnread = Object.values(unreadBySender).reduce((a, b) => a + b, 0);
 
+  const openChat = (person) => {
+    markRead(person._id);
+    navigate("/chat", { state: { receiverId: person._id, receiverName: person.name } });
+  };
+
   return (
-    <Box sx={{
-      ...panel, overflow: "hidden", height: "calc(100vh - 160px)", minHeight: 500,
-      display: "flex", flexDirection: "column",
-    }}>
-      {/* Panel header */}
-      <Box sx={{ px: 2.5, py: 2, borderBottom: `1px solid ${C.border}`, bgcolor: C.white, flexShrink: 0 }}>
+    <Box sx={{ ...panel, overflow: "hidden", display: "flex", flexDirection: "column",
+      height: "calc(100vh - 160px)", minHeight: 420 }}>
+
+      {/* header */}
+      <Box sx={{ px: 2.5, py: 2, borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           <Stack direction="row" spacing={1} alignItems="center">
             <ChatBubbleOutlineIcon sx={{ color: C.accent, fontSize: 18 }} />
@@ -232,167 +167,86 @@ const ChatPanel = ({ contacts, user, token }) => {
         </Stack>
       </Box>
 
-      <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
+      {/* search */}
+      <Box sx={{ px: 1.5, py: 1, borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+        <TextField fullWidth size="small" placeholder="Find by name…"
+          value={search} onChange={(e) => setSearch(e.target.value)}
+          InputProps={{
+            startAdornment: <SearchIcon sx={{ fontSize: 16, color: C.textDim, mr: 0.5 }} />,
+            sx: { borderRadius: "10px", fontSize: "0.75rem", bgcolor: C.chatBg,
+              "& fieldset": { border: "none" } },
+          }} />
+      </Box>
 
-        {/* ── CONTACT LIST ─────────────────────────────────────────────── */}
-        <Box sx={{
-          width: selected ? 160 : "100%",
-          minWidth: selected ? 160 : undefined,
-          borderRight: selected ? `1px solid ${C.border}` : "none",
-          display: "flex", flexDirection: "column", overflow: "hidden",
-          transition: "width 0.2s",
-          bgcolor: C.white,
-        }}>
-          {/* search */}
-          <Box sx={{ px: 1.5, py: 1, borderBottom: `1px solid ${C.border}` }}>
-            <TextField fullWidth size="small" placeholder="Find…"
-              value={search} onChange={(e) => setSearch(e.target.value)}
-              InputProps={{
-                startAdornment: <SearchIcon sx={{ fontSize: 16, color: C.textDim, mr: 0.5 }} />,
-                sx: { borderRadius: "10px", fontSize: "0.75rem", bgcolor: C.chatBg, "& fieldset": { border: "none" } },
-              }} />
-          </Box>
-
-          {/* contacts */}
-          <Box sx={{ flex: 1, overflowY: "auto",
-            "&::-webkit-scrollbar": { width: 3 },
-            "&::-webkit-scrollbar-thumb": { bgcolor: C.border, borderRadius: 4 },
-          }}>
-            {filtered.length === 0
-              ? <Typography variant="caption" color={C.textDim} sx={{ p: 2, display: "block", textAlign: "center" }}>
-                  No contacts
-                </Typography>
-              : filtered.map((person) => {
-                const unread = unreadBySender[person._id] || 0;
-                const isActive = selected?._id === person._id;
-                return (
-                  <Box key={person._id}
-                    onClick={() => selectContact(person)}
-                    sx={{
-                      display: "flex", alignItems: "center", gap: 1.2, px: 1.5, py: 1.2,
-                      cursor: "pointer", transition: "all 0.15s",
-                      bgcolor: isActive ? C.accentBg : "transparent",
-                      borderLeft: isActive ? `3px solid ${C.accent}` : "3px solid transparent",
-                      "&:hover": { bgcolor: C.chatBg },
+      {/* contact list */}
+      <Box sx={{ flex: 1, overflowY: "auto",
+        "&::-webkit-scrollbar": { width: 3 },
+        "&::-webkit-scrollbar-thumb": { bgcolor: C.border, borderRadius: 4 },
+      }}>
+        {filtered.length === 0 ? (
+          <Stack alignItems="center" spacing={1} py={6}>
+            <InboxIcon sx={{ fontSize: 36, color: C.border }} />
+            <Typography variant="caption" color={C.textDim} textAlign="center">
+              {contacts.length === 0 ? "No chats yet" : "No matching contacts"}
+            </Typography>
+          </Stack>
+        ) : (
+          filtered.map((person) => {
+            const unread = unreadBySender[person._id] || 0;
+            return (
+              <Box key={person._id} onClick={() => openChat(person)}
+                sx={{
+                  display: "flex", alignItems: "center", gap: 1.5, px: 2, py: 1.4,
+                  cursor: "pointer", transition: "all 0.15s",
+                  bgcolor: unread > 0 ? "rgba(21,101,192,0.04)" : "transparent",
+                  borderLeft: unread > 0 ? `3px solid ${C.accent}` : "3px solid transparent",
+                  "&:hover": { bgcolor: C.chatBg },
+                }}>
+                {/* avatar with badge */}
+                <Box sx={{ position: "relative", flexShrink: 0 }}>
+                  <Avatar src={person.avatar}
+                    sx={{ width: 38, height: 38, bgcolor: C.accent, fontSize: 13, fontWeight: 900 }}>
+                    {person.name?.[0]?.toUpperCase()}
+                  </Avatar>
+                  {unread > 0 && (
+                    <Box sx={{
+                      position: "absolute", top: -3, right: -3,
+                      width: 17, height: 17, bgcolor: "#e53935",
+                      borderRadius: "50%", border: "2px solid #fff",
+                      display: "flex", alignItems: "center", justifyContent: "center",
                     }}>
-                    <Box sx={{ position: "relative", flexShrink: 0 }}>
-                      <Avatar src={person.avatar}
-                        sx={{ width: 34, height: 34, bgcolor: C.accent, fontSize: 12, fontWeight: 900 }}>
-                        {person.name?.[0]?.toUpperCase()}
-                      </Avatar>
-                      {unread > 0 && (
-                        <Box sx={{
-                          position: "absolute", top: -3, right: -3, width: 16, height: 16,
-                          bgcolor: "#e53935", borderRadius: "50%", border: "2px solid #fff",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                        }}>
-                          <Typography sx={{ fontSize: "0.45rem", color: "#fff", fontWeight: 900 }}>
-                            {unread > 9 ? "9+" : unread}
-                          </Typography>
-                        </Box>
-                      )}
-                    </Box>
-                    <Box sx={{ minWidth: 0, flex: 1 }}>
-                      <Typography fontSize="0.75rem" fontWeight={unread > 0 ? 800 : 600}
-                        color={C.dark} noWrap>
-                        {person.name}
+                      <Typography sx={{ fontSize: "0.45rem", color: "#fff", fontWeight: 900 }}>
+                        {unread > 9 ? "9+" : unread}
                       </Typography>
-                      {unread > 0 && (
-                        <Typography fontSize="0.58rem" color={C.accent} fontWeight={700}>
-                          {unread} new
-                        </Typography>
-                      )}
                     </Box>
-                  </Box>
-                );
-              })
-            }
-          </Box>
-        </Box>
+                  )}
+                </Box>
 
-        {/* ── MESSAGES AREA ────────────────────────────────────────────── */}
-        {selected && (
-          <Box sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", bgcolor: C.chatBg }}>
-            {/* chat header */}
-            <Box sx={{ px: 2, py: 1.2, borderBottom: `1px solid ${C.border}`, bgcolor: C.white,
-              display: "flex", alignItems: "center", gap: 1.5, flexShrink: 0 }}>
-              <IconButton size="small" onClick={() => setSelected(null)} sx={{ color: C.textDim }}>
-                <ArrowBackIcon sx={{ fontSize: 18 }} />
-              </IconButton>
-              <Avatar src={selected.avatar}
-                sx={{ width: 30, height: 30, bgcolor: C.accent, fontSize: 11, fontWeight: 900 }}>
-                {selected.name?.[0]?.toUpperCase()}
-              </Avatar>
-              <Typography fontWeight={800} color={C.dark} fontSize="0.82rem" noWrap>{selected.name}</Typography>
-            </Box>
-
-            {/* messages */}
-            <Box ref={scrollRef} sx={{
-              flex: 1, overflowY: "auto", p: 1.5, display: "flex", flexDirection: "column", gap: 0.8,
-              "&::-webkit-scrollbar": { width: 3 },
-              "&::-webkit-scrollbar-thumb": { bgcolor: C.border, borderRadius: 4 },
-            }}>
-              {loadingMsgs
-                ? <CircularProgress size={20} sx={{ color: C.accent, m: "auto" }} />
-                : messages.length === 0
-                ? <Typography variant="caption" color={C.textDim} textAlign="center" sx={{ mt: 4 }}>
-                    No messages yet
+                {/* name + new tag */}
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography fontSize="0.82rem" fontWeight={unread > 0 ? 800 : 600}
+                    color={C.dark} noWrap>
+                    {person.name}
                   </Typography>
-                : messages.map((msg, i) => {
-                  const mine = isMe(msg);
-                  return (
-                    <Box key={i} sx={{ display: "flex", justifyContent: mine ? "flex-end" : "flex-start" }}>
-                      <Box sx={{
-                        maxWidth: "80%", px: 1.5, py: 0.8, borderRadius: mine ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-                        background: mine ? `linear-gradient(135deg, ${C.accent}, ${C.accentL})` : C.white,
-                        color:  mine ? "#fff" : C.dark,
-                        border: mine ? "none" : `1px solid ${C.border}`,
-                        boxShadow: mine ? "0 2px 8px rgba(21,101,192,0.2)" : "0 1px 4px rgba(0,0,0,0.05)",
-                      }}>
-                        {msg.imageUrl
-                          ? <Box component="img" src={msg.imageUrl} alt="img"
-                              sx={{ maxWidth: 140, maxHeight: 160, borderRadius: "8px", display: "block" }} />
-                          : <Typography fontSize="0.75rem" sx={{ lineHeight: 1.5, wordBreak: "break-word" }}>
-                              {msg.text}
-                            </Typography>
-                        }
-                        <Typography sx={{ fontSize: "0.52rem", opacity: 0.55, textAlign: "right", mt: 0.3 }}>
-                          {new Date(msg.timestamp || msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  );
-                })
-              }
-            </Box>
+                  {unread > 0 && (
+                    <Typography fontSize="0.62rem" color={C.accent} fontWeight={700}>
+                      {unread} new message{unread > 1 ? "s" : ""}
+                    </Typography>
+                  )}
+                </Box>
 
-            {/* input */}
-            <Box sx={{ px: 1.5, py: 1.2, borderTop: `1px solid ${C.border}`, bgcolor: C.white, flexShrink: 0 }}>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <TextField fullWidth size="small" placeholder="Type a message…"
-                  value={input} onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), sendMsg())}
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: "12px", bgcolor: C.chatBg, fontSize: "0.78rem",
-                      "& fieldset": { borderColor: C.border },
-                      "&:hover fieldset": { borderColor: C.accent },
-                      "&.Mui-focused fieldset": { borderColor: C.accent },
-                    },
-                  }} />
-                <IconButton onClick={sendMsg} disabled={!input.trim()}
-                  sx={{
-                    bgcolor:  input.trim() ? C.accent : C.border, color: "#fff", width: 34, height: 34,
-                    flexShrink: 0,
-                    "&:hover": { bgcolor: input.trim() ? C.accentL : C.border },
-                    "&.Mui-disabled": { bgcolor: C.border, color: C.textDim },
-                  }}>
-                  <SendIcon sx={{ fontSize: 16 }} />
-                </IconButton>
-              </Stack>
-            </Box>
-          </Box>
+                <ChatBubbleOutlineIcon sx={{ fontSize: 14, color: unread > 0 ? C.accent : C.border, flexShrink: 0 }} />
+              </Box>
+            );
+          })
         )}
+      </Box>
+
+      {/* footer hint */}
+      <Box sx={{ px: 2, py: 1.2, borderTop: `1px solid ${C.border}`, bgcolor: C.chatBg }}>
+        <Typography variant="caption" color={C.textDim} fontSize="0.62rem" textAlign="center" display="block">
+          Click any contact to open full chat
+        </Typography>
       </Box>
     </Box>
   );
@@ -688,9 +542,9 @@ const Dashboard = () => {
               )}
             </Stack>
 
-            {/* ══ RIGHT — EMBEDDED CHAT PANEL ══════════════════════════════ */}
+            {/* ══ RIGHT — CHAT PANEL ═══════════════════════════════════════ */}
             <Box sx={{ position: { lg: "sticky" }, top: { lg: 90 } }}>
-              <ChatPanel contacts={recentChats.filter((c) => c?.name)} user={user} token={token} />
+              <ChatPanel contacts={recentChats.filter((c) => c?.name)} navigate={navigate} />
             </Box>
 
           </Box>
