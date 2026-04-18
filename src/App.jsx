@@ -49,7 +49,8 @@ const App = () => {
         <Route path="/chat/:mentorId" element={<Chat />} />
         <Route path="/mentor/:id" element={<MentorProfile />} />
         <Route path="/student-history" element={<StudentHistory />} />
-        <Route path="/student-profile/:studentId" element={<StudentProfileView />} />  
+        <Route path="/student-history/:studentId" element={<StudentHistory />} />  {/* mentor view */}
+        <Route path="/student-profile/:studentId" element={<StudentProfileView />} />
       </Routes>
       <Footer />
     </div>

@@ -1,165 +1,225 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom"; // ADD navigate
+import { useNavigate, useParams } from "react-router-dom";
 import {
-  Box, Container, Typography, TextField, Button, Paper,
-  Divider, Stack, Table, TableBody, TableCell,
-  TableContainer, TableRow, Chip, IconButton,
-  CircularProgress, Tooltip, Avatar, Grid
+  Box, Container, Typography, TextField, Button, Paper, Divider, Stack,
+  Table, TableBody, TableCell, TableContainer, TableRow, Chip, IconButton,
+  CircularProgress, Tooltip, Avatar, Grid, Dialog, DialogTitle,
+  DialogContent, DialogActions, Alert,
 } from "@mui/material";
-import SaveIcon from "@mui/icons-material/Save";
+import SaveIcon            from "@mui/icons-material/Save";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import RefreshIcon from "@mui/icons-material/Refresh";
-import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
+import DeleteOutlineIcon   from "@mui/icons-material/DeleteOutline";
+import RefreshIcon         from "@mui/icons-material/Refresh";
+import DownloadIcon        from "@mui/icons-material/Download";
+import WarningIcon         from "@mui/icons-material/Warning";
+import LockIcon            from "@mui/icons-material/Lock";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { jsPDF } from "jspdf";
 
 const BASE_URL = "https://startup-backend-1-cj33.onrender.com";
 
-const defaultSemester = (id) => ({
-  id,
-  semesterNumber: id,
-  gpa: "",
-  subjects: [{ code: "", name: "", marks: "" }],
+const C = {
+  bg: "#f0f4ff", white: "#ffffff", accent: "#1565c0", accentLight: "#1e88e5",
+  accentBg: "rgba(21,101,192,0.07)", border: "rgba(21,101,192,0.14)",
+  textDim: "#546e7a", dark: "#1a237e", danger: "#c62828", dangerBg: "rgba(198,40,40,0.06)",
+};
+
+const card = {
+  background: C.white, border: `1px solid ${C.border}`, borderRadius: "16px",
+  boxShadow: "0 4px 20px rgba(21,101,192,0.07)",
+};
+
+const inputSx = (readOnly) => ({
+  mb: 2,
+  "& .MuiOutlinedInput-root": {
+    borderRadius: "10px",
+    bgcolor: readOnly ? "#f8faff" : "#ffffff",
+    "& fieldset": { borderColor: C.border },
+    ...(!readOnly && {
+      "&:hover fieldset": { borderColor: C.accent },
+      "&.Mui-focused fieldset": { borderColor: C.accent },
+    }),
+  },
+  "& .MuiInputLabel-root": { color: C.textDim, fontSize: "0.85rem" },
+  "& .MuiInputLabel-root.Mui-focused": { color: C.accent },
 });
 
+const defaultSemester = (id) => ({ id, semesterNumber: id, gpa: "", subjects: [{ code: "", name: "", marks: "" }] });
+
+// ── PDF generation ──────────────────────────────────────────────────────────
+const generatePDF = (data, studentName) => {
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const W = 210; let y = 18;
+
+  const addSection = (title) => {
+    if (y > 260) { doc.addPage(); y = 18; }
+    doc.setFillColor(21, 101, 192);
+    doc.rect(10, y, W - 20, 7, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8); doc.setFont(undefined, "bold");
+    doc.text(title, 14, y + 5);
+    y += 10; doc.setTextColor(30, 30, 30); doc.setFont(undefined, "normal"); doc.setFontSize(8);
+  };
+
+  const addRow = (label, value) => {
+    if (y > 270) { doc.addPage(); y = 18; }
+    doc.setFont(undefined, "bold"); doc.text(label + ":", 14, y); 
+    doc.setFont(undefined, "normal"); doc.text(String(value || "—"), 65, y);
+    y += 6;
+  };
+
+  // Title
+  doc.setFontSize(18); doc.setFont(undefined, "bold"); doc.setTextColor(21, 101, 192);
+  doc.text("SRM University — Student History Record", W / 2, y, { align: "center" });
+  y += 5;
+  doc.setFontSize(9); doc.setTextColor(100, 100, 100); doc.setFont(undefined, "normal");
+  doc.text(`Generated on ${new Date().toLocaleDateString("en-IN")}`, W / 2, y + 3, { align: "center" });
+  y += 12; doc.setDrawColor(21, 101, 192); doc.line(10, y, W - 10, y); y += 8;
+
+  addSection("01 — IDENTITY & LEGAL");
+  addRow("Full Name",     data.fullName);
+  addRow("Reg No",        data.regNo);
+  addRow("Admission No",  data.admissionNo);
+  addRow("Blood Group",   data.bloodGroup);
+  addRow("Phone",         data.phoneNumber);
+  addRow("DOB",           data.dob ? new Date(data.dob).toLocaleDateString("en-IN") : "");
+  addRow("Department",    data.department);
+  addRow("Aadhaar No",    data.aadhaarNo);
+  addRow("License No",    data.licenseNo);
+  addRow("Address",       data.permanentAddress);
+
+  addSection("02 — GUARDIANS");
+  addRow("Father's Name",        data.guardians?.fatherName);
+  addRow("Father's Occupation",  data.guardians?.fatherOccupation);
+  addRow("Father's Income",      data.guardians?.fatherAnnualIncome);
+  addRow("Father's Aadhaar",     data.guardians?.fatherAadhaar);
+  addRow("Mother's Name",        data.guardians?.motherName);
+  addRow("Mother's Occupation",  data.guardians?.motherOccupation);
+  addRow("Mother's Income",      data.guardians?.motherAnnualIncome);
+  addRow("Mother's Aadhaar",     data.guardians?.motherAadhaar);
+
+  addSection("03 — SCHOOLING");
+  addRow("10th School",      data.schooling?.highSchoolName);
+  addRow("10th Percentage",  data.schooling?.highSchoolPercentage);
+  addRow("12th School",      data.schooling?.higherSecondaryName);
+  addRow("12th Percentage",  data.schooling?.higherSecondaryPercentage);
+
+  addSection("04 — SKILLS & ACHIEVEMENTS");
+  addRow("Skills",          (data.skills || []).join(", "));
+  addRow("Achievement",     data.newAchievement);
+  addRow("Certification",   data.certificationLink);
+
+  addSection("05 — ACADEMIC LEDGER");
+  (data.semesters || []).forEach((sem) => {
+    if (y > 260) { doc.addPage(); y = 18; }
+    doc.setFont(undefined, "bold"); doc.setFontSize(8);
+    doc.text(`Semester ${sem.semesterNumber} — GPA: ${sem.gpa || "N/A"}`, 14, y); y += 5;
+    doc.setFont(undefined, "normal");
+    (sem.subjects || []).forEach((sub) => {
+      if (y > 270) { doc.addPage(); y = 18; }
+      doc.text(`  ${sub.code || "—"}  |  ${sub.name || "—"}  |  Marks: ${sub.marks || "—"}`, 16, y); y += 5;
+    });
+    y += 2;
+  });
+
+  doc.save(`${studentName || "student"}_history.pdf`);
+};
+
+// ── StudentHistory Component ────────────────────────────────────────────────
 const StudentHistory = () => {
-  const navigate = useNavigate(); // ADD
-  const token = localStorage.getItem("token");
-  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const isMentor = currentUser?.role === "mentor";
+  const navigate        = useNavigate();
+  const { studentId }   = useParams();   // Present when mentor views a student
+  const token           = localStorage.getItem("token");
+  const currentUser     = JSON.parse(localStorage.getItem("user") || "{}");
+  const isMentor        = currentUser?.role === "mentor";
+  const isReadOnly      = isMentor && !!studentId; // Mentor viewing specific student
+  const authHeaders     = { Authorization: `Bearer ${token}` };
 
-  const authHeaders = { Authorization: `Bearer ${token}` };
+  const emptyIdentity = { fullName: "", regNo: "", phoneNumber: "", dob: "", department: "", permanentAddress: "", bloodGroup: "", aadhaarNo: "", admissionNo: "", licenseNo: "", studentPhoto: "" };
+  const emptyGuardians = { fatherName: "", fatherOccupation: "", motherName: "", motherOccupation: "", fatherPhoto: "", motherPhoto: "", fatherAadhaar: "", motherAadhaar: "", fatherLicense: "", motherLicense: "", fatherAnnualIncome: "", motherAnnualIncome: "" };
+  const emptySchooling = { highSchoolName: "", highSchoolPercentage: "", higherSecondaryName: "", higherSecondaryPercentage: "" };
 
-  const [identity, setIdentity] = useState({
-    fullName: "", regNo: "", phoneNumber: "", dob: "", department: "",
-    permanentAddress: "", bloodGroup: "", aadhaarNo: "",
-    admissionNo: "", licenseNo: "", studentPhoto: ""
-  });
-
-  const [guardians, setGuardians] = useState({
-    fatherName: "", fatherOccupation: "", motherName: "", motherOccupation: "",
-    fatherPhoto: "", motherPhoto: "", fatherAadhaar: "", motherAadhaar: "",
-    fatherLicense: "", motherLicense: "", fatherAnnualIncome: "", motherAnnualIncome: ""
-  });
-
-  const [schooling, setSchooling] = useState({
-    highSchoolName: "", highSchoolPercentage: "",
-    higherSecondaryName: "", higherSecondaryPercentage: "",
-  });
-  const [skills, setSkills] = useState([]);
-  const [newSkill, setNewSkill] = useState("");
-  const [newAchievement, setNewAchievement] = useState("");
+  const [identity,          setIdentity]          = useState(emptyIdentity);
+  const [guardians,         setGuardians]         = useState(emptyGuardians);
+  const [schooling,         setSchooling]         = useState(emptySchooling);
+  const [skills,            setSkills]            = useState([]);
+  const [newSkill,          setNewSkill]          = useState("");
+  const [newAchievement,    setNewAchievement]    = useState("");
   const [certificationLink, setCertificationLink] = useState("");
-  const [semesters, setSemesters] = useState([defaultSemester(1)]);
-
-  const [isNew, setIsNew] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [semesters,         setSemesters]         = useState([defaultSemester(1)]);
+  const [isNew,             setIsNew]             = useState(null);
+  const [loading,           setLoading]           = useState(true);
+  const [saving,            setSaving]            = useState(false);
+  const [deleteDialog,      setDeleteDialog]      = useState(false);
+  const [recordData,        setRecordData]        = useState(null); // Raw data for PDF
 
   const hydrateForm = (data) => {
+    setRecordData(data);
     setIdentity({
-      fullName: data.fullName || "",
-      regNo: data.regNo || "",
-      phoneNumber: data.phoneNumber || "",
-      dob: data.dob ? data.dob.slice(0, 10) : "",
-      department: data.department || "",
-      permanentAddress: data.permanentAddress || "",
-      bloodGroup: data.bloodGroup || "",
-      aadhaarNo: data.aadhaarNo || "",
-      admissionNo: data.admissionNo || "",
-      licenseNo: data.licenseNo || "",
-      studentPhoto: data.studentPhoto || "",
+      fullName: data.fullName || "", regNo: data.regNo || "", phoneNumber: data.phoneNumber || "",
+      dob: data.dob ? data.dob.slice(0, 10) : "", department: data.department || "",
+      permanentAddress: data.permanentAddress || "", bloodGroup: data.bloodGroup || "",
+      aadhaarNo: data.aadhaarNo || "", admissionNo: data.admissionNo || "",
+      licenseNo: data.licenseNo || "", studentPhoto: data.studentPhoto || "",
     });
     setGuardians({
-      fatherName: data.guardians?.fatherName || "",
-      fatherOccupation: data.guardians?.fatherOccupation || "",
-      motherName: data.guardians?.motherName || "",
-      motherOccupation: data.guardians?.motherOccupation || "",
-      fatherPhoto: data.guardians?.fatherPhoto || "",
-      motherPhoto: data.guardians?.motherPhoto || "",
-      fatherAadhaar: data.guardians?.fatherAadhaar || "",
-      motherAadhaar: data.guardians?.motherAadhaar || "",
-      fatherLicense: data.guardians?.fatherLicense || "",
-      motherLicense: data.guardians?.motherLicense || "",
-      fatherAnnualIncome: data.guardians?.fatherAnnualIncome || "",
-      motherAnnualIncome: data.guardians?.motherAnnualIncome || "",
+      fatherName: data.guardians?.fatherName || "", fatherOccupation: data.guardians?.fatherOccupation || "",
+      motherName: data.guardians?.motherName || "", motherOccupation: data.guardians?.motherOccupation || "",
+      fatherPhoto: data.guardians?.fatherPhoto || "", motherPhoto: data.guardians?.motherPhoto || "",
+      fatherAadhaar: data.guardians?.fatherAadhaar || "", motherAadhaar: data.guardians?.motherAadhaar || "",
+      fatherLicense: data.guardians?.fatherLicense || "", motherLicense: data.guardians?.motherLicense || "",
+      fatherAnnualIncome: data.guardians?.fatherAnnualIncome || "", motherAnnualIncome: data.guardians?.motherAnnualIncome || "",
     });
     setSchooling({
-      highSchoolName: data.schooling?.highSchoolName || "",
-      highSchoolPercentage: data.schooling?.highSchoolPercentage || "",
-      higherSecondaryName: data.schooling?.higherSecondaryName || "",
-      higherSecondaryPercentage: data.schooling?.higherSecondaryPercentage || "",
+      highSchoolName: data.schooling?.highSchoolName || "", highSchoolPercentage: data.schooling?.highSchoolPercentage || "",
+      higherSecondaryName: data.schooling?.higherSecondaryName || "", higherSecondaryPercentage: data.schooling?.higherSecondaryPercentage || "",
     });
     setSkills(data.skills || []);
     setNewAchievement(data.newAchievement || "");
     setCertificationLink(data.certificationLink || "");
-
     if (data.semesters?.length) {
-      setSemesters(
-        data.semesters.map((s) => ({
-          id: s.semesterNumber,
-          semesterNumber: s.semesterNumber,
-          gpa: s.gpa || "",
-          subjects: s.subjects?.length
-            ? s.subjects
-            : [{ code: "", name: "", marks: "" }],
-        }))
-      );
+      setSemesters(data.semesters.map((s) => ({ id: s.semesterNumber, semesterNumber: s.semesterNumber, gpa: s.gpa || "", subjects: s.subjects?.length ? s.subjects : [{ code: "", name: "", marks: "" }] })));
     }
   };
 
   const handleImageUpload = (e, section, field) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (section === "identity") {
-          setIdentity({ ...identity, [field]: reader.result });
-        } else {
-          setGuardians({ ...guardians, [field]: reader.result });
-        }
-      };
-      reader.readAsDataURL(file);
-    }
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (section === "identity") setIdentity((p) => ({ ...p, [field]: reader.result }));
+      else setGuardians((p) => ({ ...p, [field]: reader.result }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const loadRecord = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await axios.get(
-        `${BASE_URL}/api/student-history`,
-        { headers: authHeaders }
-      );
+      const url = isReadOnly
+        ? `${BASE_URL}/api/student-history/${studentId}`
+        : `${BASE_URL}/api/student-history`;
+      const { data } = await axios.get(url, { headers: authHeaders });
       hydrateForm(data.data);
       setIsNew(false);
     } catch (err) {
-      const status = err.response?.status;
-      if (status === 404) {
-        setIsNew(true);
+      if (err.response?.status === 404) setIsNew(true);
+      else if (err.response?.status === 403) {
+        toast.error("Access denied — you are not connected with this student.");
+        navigate("/dashboard");
       } else {
         toast.error(err.response?.data?.message || "Failed to load history.");
         setIsNew(true);
       }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    } finally { setLoading(false); }
+  }, [studentId, isReadOnly]);
 
   useEffect(() => { loadRecord(); }, [loadRecord]);
 
   const buildPayload = () => ({
-    ...identity,
-    guardians,
-    schooling,
-    skills,
-    newAchievement,
-    certificationLink,
-    semesters: semesters.map((s) => ({
-      semesterNumber: s.semesterNumber || s.id,
-      gpa: s.gpa,
-      subjects: s.subjects,
-    })),
+    ...identity, guardians, schooling, skills, newAchievement, certificationLink,
+    semesters: semesters.map((s) => ({ semesterNumber: s.semesterNumber || s.id, gpa: s.gpa, subjects: s.subjects })),
   });
 
   const handleSync = async () => {
@@ -167,362 +227,332 @@ const StudentHistory = () => {
     try {
       const payload = buildPayload();
       let responseData;
-
       if (isNew) {
-        const res = await axios.post(
-          `${BASE_URL}/api/student-history`,
-          payload,
-          { headers: authHeaders }
-        );
-        responseData = res.data.data;
-        setIsNew(false);
-        toast.success("History record created!");
+        const res = await axios.post(`${BASE_URL}/api/student-history`, payload, { headers: authHeaders });
+        responseData = res.data.data; setIsNew(false); toast.success("History record created!");
       } else {
-        const res = await axios.put(
-          `${BASE_URL}/api/student-history`,
-          payload,
-          { headers: authHeaders }
-        );
-        responseData = res.data.data;
-        toast.success("Ledger synced successfully!");
+        const res = await axios.put(`${BASE_URL}/api/student-history`, payload, { headers: authHeaders });
+        responseData = res.data.data; toast.success("Record updated successfully!");
       }
-
       if (responseData) hydrateForm(responseData);
     } catch (err) {
-      console.error("Save error:", err.response?.data || err.message);
-      if (err.response?.status === 409) {
-        setIsNew(false);
-        toast.error("Record exists — retrying as update…");
-        setSaving(false);
-        handleSync();
-        return;
-      }
-      toast.error(err.response?.data?.message || "Failed to sync ledger.");
-    } finally {
-      setSaving(false);
-    }
+      if (err.response?.status === 409) { setIsNew(false); setSaving(false); handleSync(); return; }
+      toast.error(err.response?.data?.message || "Failed to save.");
+    } finally { setSaving(false); }
   };
 
-  const addSemester = () => {
-    if (semesters.length < 8) {
-      const nextId = semesters.length + 1;
-      setSemesters([...semesters, defaultSemester(nextId)]);
-    }
+  const handleDelete = async () => {
+    try {
+      await axios.delete(`${BASE_URL}/api/student-history`, { headers: authHeaders });
+      toast.success("Record deleted.");
+      setDeleteDialog(false);
+      setIsNew(true);
+      setIdentity(emptyIdentity); setGuardians(emptyGuardians); setSchooling(emptySchooling);
+      setSkills([]); setNewAchievement(""); setCertificationLink(""); setSemesters([defaultSemester(1)]);
+    } catch (err) { toast.error(err.response?.data?.message || "Delete failed."); }
   };
 
-  const addSubject = (semIndex) => {
-    const updated = [...semesters];
-    updated[semIndex].subjects.push({ code: "", name: "", marks: "" });
-    setSemesters(updated);
-  };
+  const addSkill    = () => { const t = newSkill.trim(); if (t && !skills.includes(t)) { setSkills([...skills, t]); setNewSkill(""); } };
+  const removeSkill = (s) => setSkills(skills.filter((sk) => sk !== s));
+  const addSemester = () => { if (semesters.length < 8) setSemesters([...semesters, defaultSemester(semesters.length + 1)]); };
+  const addSubject  = (si) => { const u = [...semesters]; u[si].subjects.push({ code: "", name: "", marks: "" }); setSemesters(u); };
+  const updateSubject = (si, subi, field, val) => { const u = [...semesters]; u[si].subjects[subi][field] = val; setSemesters(u); };
+  const removeSubject = (si, subi) => { const u = [...semesters]; u[si].subjects.splice(subi, 1); setSemesters(u); };
+  const updateGpa   = (si, val) => { const u = [...semesters]; u[si].gpa = val; setSemesters(u); };
 
-  const updateSubject = (semIndex, subIndex, field, value) => {
-    const updated = [...semesters];
-    updated[semIndex].subjects[subIndex][field] = value;
-    setSemesters(updated);
-  };
+  const handleDownloadPDF = () => generatePDF(recordData || buildPayload(), identity.fullName || currentUser.name);
 
-  const updateGpa = (semIndex, value) => {
-    const updated = [...semesters];
-    updated[semIndex].gpa = value;
-    setSemesters(updated);
-  };
+  if (loading) return (
+    <Box sx={{ bgcolor: C.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <CircularProgress sx={{ color: C.accent }} />
+    </Box>
+  );
 
-  const removeSubject = (semIndex, subIndex) => {
-    const updated = [...semesters];
-    updated[semIndex].subjects.splice(subIndex, 1);
-    setSemesters(updated);
-  };
-
-  const addSkill = () => {
-    const trimmed = newSkill.trim();
-    if (trimmed && !skills.includes(trimmed)) {
-      setSkills([...skills, trimmed]);
-      setNewSkill("");
-    }
-  };
-  const removeSkill = (skill) => setSkills(skills.filter((s) => s !== skill));
-
-  const colors = {
-    bg: "#030014",
-    accent: "#7000ff",
-    glass: "rgba(255, 255, 255, 0.02)",
-    border: "rgba(255, 255, 255, 0.08)",
-  };
-
-  const inputStyles = {
-    mb: 2,
-    "& .MuiInputBase-root": {
-      color: "#ffffff",
-      backgroundColor: "rgba(255,255,255,0.01)",
-      fontSize: "0.8rem",
-      borderRadius: "4px",
-    },
-    "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.4)", fontSize: "0.75rem" },
-    "& .MuiOutlinedInput-notchedOutline": { borderColor: colors.border },
-    "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: colors.accent },
-  };
-
-  if (loading) {
+  // Mentor with no studentId → redirect them to dashboard
+  if (isMentor && !studentId) {
     return (
-      <Box sx={{ bgcolor: colors.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <CircularProgress sx={{ color: colors.accent }} />
+      <Box sx={{ bgcolor: C.bg, minHeight: "100vh", py: 12 }}>
+        <Container maxWidth="sm" sx={{ textAlign: "center" }}>
+          <Typography variant="h5" fontWeight={800} color={C.dark} mb={2}>Select a Student</Typography>
+          <Typography sx={{ color: C.textDim, mb: 4 }}>
+            Go to your Dashboard and click a connected student to view their history.
+          </Typography>
+          <Button variant="contained" onClick={() => navigate("/dashboard")}
+            sx={{ bgcolor: C.accent, borderRadius: 2, textTransform: "none", fontWeight: 700 }}>
+            Back to Dashboard
+          </Button>
+        </Container>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ bgcolor: colors.bg, minHeight: "100vh", py: 10, color: "#fff" }}>
+    <Box sx={{ bgcolor: C.bg, minHeight: "100vh", py: 10 }}>
       <Container maxWidth="xl">
 
         {/* TOP BAR */}
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
+        <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} sx={{ mb: 4 }} gap={2}>
           <Box>
-            <Typography variant="h4" fontWeight={900} letterSpacing="-0.02em">
+            <Typography variant="h4" fontWeight={900} color={C.dark} letterSpacing="-0.02em">
               Student History
             </Typography>
-            <Typography variant="caption" sx={{ color: colors.accent, fontWeight: 800, letterSpacing: 2 }}>
-              SRM UNIVERSITY TRICHY {isMentor && "· MENTOR VIEW"}
-            </Typography>
+            <Stack direction="row" spacing={1} alignItems="center" mt={0.5}>
+              <Typography variant="caption" sx={{ color: C.accent, fontWeight: 800, letterSpacing: 2 }}>
+                SRM UNIVERSITY TRICHY
+              </Typography>
+              {isReadOnly && (
+                <Chip icon={<LockIcon sx={{ fontSize: "0.75rem" }} />} label="MENTOR VIEW — READ ONLY"
+                  size="small" sx={{ bgcolor: "rgba(198,40,40,0.1)", color: C.danger, fontWeight: 800, fontSize: "0.62rem" }} />
+              )}
+            </Stack>
           </Box>
 
-          <Stack direction="row" spacing={2}>
+          <Stack direction="row" spacing={1.5} flexWrap="wrap">
             <Tooltip title="Reload from server">
-              <IconButton onClick={loadRecord} sx={{ color: "rgba(255,255,255,0.4)" }}>
+              <IconButton onClick={loadRecord} sx={{ color: C.accent, border: `1px solid ${C.border}`, borderRadius: "10px" }}>
                 <RefreshIcon />
               </IconButton>
             </Tooltip>
-            <Button
-              variant="contained"
-              startIcon={saving ? <CircularProgress size={14} color="inherit" /> : <SaveIcon />}
-              onClick={handleSync}
-              disabled={saving}
-              sx={{ bgcolor: colors.accent, px: 4, borderRadius: 0, fontWeight: 900 }}
-            >
-              {saving ? "SYNCING…" : isNew ? "CREATE RECORD" : "SYNC_LEDGER"}
-            </Button>
+
+            {/* PDF Download — always visible */}
+            {!isNew && (
+              <Button variant="outlined" startIcon={<DownloadIcon />} onClick={handleDownloadPDF}
+                sx={{ borderColor: C.border, color: C.accent, borderRadius: "12px", fontWeight: 700, textTransform: "none", "&:hover": { borderColor: C.accent, bgcolor: C.accentBg } }}>
+                Download PDF
+              </Button>
+            )}
+
+            {/* Save/Update — only for students */}
+            {!isReadOnly && (
+              <Button variant="contained"
+                startIcon={saving ? <CircularProgress size={14} color="inherit" /> : <SaveIcon />}
+                onClick={handleSync} disabled={saving}
+                sx={{ bgcolor: C.accent, px: 4, borderRadius: "12px", fontWeight: 800, textTransform: "none", "&:hover": { bgcolor: C.accentLight } }}>
+                {saving ? "Saving…" : isNew ? "Create Record" : "Save Changes"}
+              </Button>
+            )}
+
+            {/* Delete — only for students with an existing record */}
+            {!isReadOnly && !isNew && (
+              <Button variant="outlined" startIcon={<DeleteOutlineIcon />} onClick={() => setDeleteDialog(true)}
+                sx={{ borderColor: C.danger, color: C.danger, borderRadius: "12px", fontWeight: 700, textTransform: "none", "&:hover": { bgcolor: C.dangerBg } }}>
+                Delete
+              </Button>
+            )}
           </Stack>
         </Stack>
 
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+        {isNew && !isReadOnly && (
+          <Alert severity="info" sx={{ mb: 3, borderRadius: "12px" }}>
+            No record found. Fill in the form below and click <strong>Create Record</strong> to save.
+          </Alert>
+        )}
 
-          {/* ── LEFT ──────────────────────────────────────────────────────── */}
-          <Box sx={{ flex: { xs: "1 1 100%", lg: "1 1 65%" }, display: "flex", flexDirection: "column", gap: 3 }}>
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+          {/* Left Column */}
+          <Box sx={{ flex: { xs: "1 1 100%", lg: "1 1 64%" }, display: "flex", flexDirection: "column", gap: 3 }}>
 
             {/* 01 IDENTITY */}
-            <Paper sx={{ p: 3, bgcolor: colors.glass, border: `1px solid ${colors.border}`, borderRadius: 0 }}>
-              <Typography variant="overline" color={colors.accent} fontWeight={900}>01 // IDENTITY & LEGAL</Typography>
-              <Grid container spacing={2} sx={{ mt: 2 }}>
-
-                {/* Student Photo Section */}
+            <Paper sx={{ ...card, p: 3 }}>
+              <Typography variant="overline" color={C.accent} fontWeight={900} letterSpacing={2}>01 — Identity & Legal</Typography>
+              <Grid container spacing={2} sx={{ mt: 1 }}>
                 <Grid item xs={12} sm={3}>
-                  <Stack alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                    <Avatar
-                      src={identity.studentPhoto}
-                      variant="rounded"
-                      sx={{ width: 85, height: 100, bgcolor: "rgba(255,255,255,0.05)", border: `1px solid ${colors.border}` }}
-                    />
-                    <Button variant="text" component="label" sx={{ fontSize: '0.6rem', color: colors.accent }}>
-                      Upload Student Photo
-                      <input hidden accept="image/*" type="file" onChange={(e) => handleImageUpload(e, "identity", "studentPhoto")} />
-                    </Button>
+                  <Stack alignItems="center" spacing={1}>
+                    <Avatar src={identity.studentPhoto} variant="rounded"
+                      sx={{ width: 90, height: 110, bgcolor: C.accentBg, border: `1px solid ${C.border}` }} />
+                    {!isReadOnly && (
+                      <Button variant="text" component="label" size="small"
+                        sx={{ fontSize: "0.62rem", color: C.accent, textTransform: "none" }}>
+                        Upload Photo
+                        <input hidden accept="image/*" type="file" onChange={(e) => handleImageUpload(e, "identity", "studentPhoto")} />
+                      </Button>
+                    )}
                   </Stack>
                 </Grid>
 
-                {/* Identity Fields */}
                 <Grid item xs={12} sm={9}>
                   <Grid container spacing={2}>
-                    <Grid item xs={12} md={6}>
-                      <TextField fullWidth label="Full Legal Name" value={identity.fullName} onChange={(e) => setIdentity({ ...identity, fullName: e.target.value })} sx={inputStyles} />
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <TextField fullWidth label="Blood Group" value={identity.bloodGroup} onChange={(e) => setIdentity({ ...identity, bloodGroup: e.target.value })} sx={inputStyles} />
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <TextField fullWidth label="Admission No" value={identity.admissionNo} onChange={(e) => setIdentity({ ...identity, admissionNo: e.target.value })} sx={inputStyles} />
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                      <TextField fullWidth label="Reg No" value={identity.regNo} onChange={(e) => setIdentity({ ...identity, regNo: e.target.value })} sx={inputStyles} />
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                      <TextField fullWidth label="Phone Number" value={identity.phoneNumber} onChange={(e) => setIdentity({ ...identity, phoneNumber: e.target.value })} sx={inputStyles} />
-                    </Grid>
+                    {[
+                      { label: "Full Legal Name", key: "fullName", xs: 12, md: 6 },
+                      { label: "Blood Group",     key: "bloodGroup", xs: 6, md: 3 },
+                      { label: "Admission No",    key: "admissionNo", xs: 6, md: 3 },
+                      { label: "Reg No",          key: "regNo", xs: 12, md: 6 },
+                      { label: "Phone Number",    key: "phoneNumber", xs: 12, md: 6 },
+                    ].map((f) => (
+                      <Grid item xs={f.xs} md={f.md} key={f.key}>
+                        <TextField fullWidth label={f.label} value={identity[f.key]}
+                          inputProps={{ readOnly: isReadOnly }}
+                          onChange={(e) => !isReadOnly && setIdentity({ ...identity, [f.key]: e.target.value })}
+                          sx={inputSx(isReadOnly)} />
+                      </Grid>
+                    ))}
                   </Grid>
                 </Grid>
 
-                {/* Legal ID Row */}
                 <Grid item xs={12} md={4}>
-                  <TextField fullWidth label="Aadhaar No" value={identity.aadhaarNo} onChange={(e) => setIdentity({ ...identity, aadhaarNo: e.target.value })} sx={inputStyles} />
+                  <TextField fullWidth label="Aadhaar No" value={identity.aadhaarNo} inputProps={{ readOnly: isReadOnly }}
+                    onChange={(e) => !isReadOnly && setIdentity({ ...identity, aadhaarNo: e.target.value })} sx={inputSx(isReadOnly)} />
                 </Grid>
                 <Grid item xs={12} md={4}>
-                  <TextField fullWidth label="License No" value={identity.licenseNo} onChange={(e) => setIdentity({ ...identity, licenseNo: e.target.value })} sx={inputStyles} />
+                  <TextField fullWidth label="License No" value={identity.licenseNo} inputProps={{ readOnly: isReadOnly }}
+                    onChange={(e) => !isReadOnly && setIdentity({ ...identity, licenseNo: e.target.value })} sx={inputSx(isReadOnly)} />
                 </Grid>
                 <Grid item xs={12} md={4}>
-                  <TextField fullWidth label="DOB" type="date" InputLabelProps={{ shrink: true }} value={identity.dob} onChange={(e) => setIdentity({ ...identity, dob: e.target.value })} sx={inputStyles} />
+                  <TextField fullWidth label="DOB" type="date" InputLabelProps={{ shrink: true }}
+                    value={identity.dob} inputProps={{ readOnly: isReadOnly }}
+                    onChange={(e) => !isReadOnly && setIdentity({ ...identity, dob: e.target.value })} sx={inputSx(isReadOnly)} />
                 </Grid>
                 <Grid item xs={12}>
-                  <TextField fullWidth multiline rows={2} label="Permanent Address" value={identity.permanentAddress} onChange={(e) => setIdentity({ ...identity, permanentAddress: e.target.value })} sx={inputStyles} />
+                  <TextField fullWidth multiline rows={2} label="Permanent Address" value={identity.permanentAddress}
+                    inputProps={{ readOnly: isReadOnly }}
+                    onChange={(e) => !isReadOnly && setIdentity({ ...identity, permanentAddress: e.target.value })} sx={inputSx(isReadOnly)} />
                 </Grid>
               </Grid>
             </Paper>
 
-            <Paper sx={{ p: 3, bgcolor: colors.glass, border: `1px solid ${colors.border}`, borderRadius: 0 }}>
-              <Typography variant="overline" color={colors.accent} fontWeight={900}>02 // GUARDIAN DOSSIER</Typography>
-              <Grid container spacing={3} sx={{ mt: 2 }}>
-
-                {/* Father's Section */}
-                <Grid item xs={12} md={6}>
-                  <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Avatar src={guardians.fatherPhoto} variant="rounded" sx={{ width: 65, height: 80, mb: 1, bgcolor: "rgba(255,255,255,0.05)" }} />
-                      <Button variant="text" component="label" sx={{ fontSize: '0.55rem', p: 0 }}>
-                        Upload <input hidden accept="image/*" type="file" onChange={(e) => handleImageUpload(e, "guardians", "fatherPhoto")} />
-                      </Button>
-                    </Box>
-                    <Box sx={{ flexGrow: 1 }}>
-                      <TextField fullWidth label="Father's Name" value={guardians.fatherName} onChange={(e) => setGuardians({ ...guardians, fatherName: e.target.value })} sx={inputStyles} />
-                      <TextField fullWidth label="Father's Occupation" value={guardians.fatherOccupation} onChange={(e) => setGuardians({ ...guardians, fatherOccupation: e.target.value })} sx={inputStyles} />
-                    </Box>
-                  </Stack>
-                  <TextField fullWidth label="Father's Aadhaar" value={guardians.fatherAadhaar} onChange={(e) => setGuardians({ ...guardians, fatherAadhaar: e.target.value })} sx={inputStyles} />
-                  <TextField fullWidth label="Father's License" value={guardians.fatherLicense} onChange={(e) => setGuardians({ ...guardians, fatherLicense: e.target.value })} sx={inputStyles} />
-                  <TextField fullWidth label="Father's Annual Income" value={guardians.fatherAnnualIncome} onChange={(e) => setGuardians({ ...guardians, fatherAnnualIncome: e.target.value })} sx={inputStyles} />
-                </Grid>
-
-                {/* Mother's Section */}
-                <Grid item xs={12} md={6}>
-                  <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Avatar src={guardians.motherPhoto} variant="rounded" sx={{ width: 65, height: 80, mb: 1, bgcolor: "rgba(255,255,255,0.05)" }} />
-                      <Button variant="text" component="label" sx={{ fontSize: '0.55rem', p: 0 }}>
-                        Upload <input hidden accept="image/*" type="file" onChange={(e) => handleImageUpload(e, "guardians", "motherPhoto")} />
-                      </Button>
-                    </Box>
-                    <Box sx={{ flexGrow: 1 }}>
-                      <TextField fullWidth label="Mother's Name" value={guardians.motherName} onChange={(e) => setGuardians({ ...guardians, motherName: e.target.value })} sx={inputStyles} />
-                      <TextField fullWidth label="Mother's Occupation" value={guardians.motherOccupation} onChange={(e) => setGuardians({ ...guardians, motherOccupation: e.target.value })} sx={inputStyles} />
-                    </Box>
-                  </Stack>
-                  <TextField fullWidth label="Mother's Aadhaar" value={guardians.motherAadhaar} onChange={(e) => setGuardians({ ...guardians, motherAadhaar: e.target.value })} sx={inputStyles} />
-                  <TextField fullWidth label="Mother's License" value={guardians.motherLicense} onChange={(e) => setGuardians({ ...guardians, motherLicense: e.target.value })} sx={inputStyles} />
-                  <TextField fullWidth label="Mother's Annual Income" value={guardians.motherAnnualIncome} onChange={(e) => setGuardians({ ...guardians, motherAnnualIncome: e.target.value })} sx={inputStyles} />
-                </Grid>
+            {/* 02 GUARDIANS */}
+            <Paper sx={{ ...card, p: 3 }}>
+              <Typography variant="overline" color={C.accent} fontWeight={900} letterSpacing={2}>02 — Guardian Dossier</Typography>
+              <Grid container spacing={3} sx={{ mt: 1 }}>
+                {[
+                  { prefix: "father", title: "Father", photoKey: "fatherPhoto", fields: [
+                    { label: "Father's Name", key: "fatherName" }, { label: "Occupation", key: "fatherOccupation" },
+                    { label: "Father's Aadhaar", key: "fatherAadhaar" }, { label: "Father's License", key: "fatherLicense" },
+                    { label: "Annual Income", key: "fatherAnnualIncome" },
+                  ]},
+                  { prefix: "mother", title: "Mother", photoKey: "motherPhoto", fields: [
+                    { label: "Mother's Name", key: "motherName" }, { label: "Occupation", key: "motherOccupation" },
+                    { label: "Mother's Aadhaar", key: "motherAadhaar" }, { label: "Mother's License", key: "motherLicense" },
+                    { label: "Annual Income", key: "motherAnnualIncome" },
+                  ]},
+                ].map(({ title, photoKey, fields }) => (
+                  <Grid item xs={12} md={6} key={title}>
+                    <Typography variant="subtitle2" fontWeight={700} color={C.dark} mb={2}>{title}</Typography>
+                    <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ mb: 2 }}>
+                      <Box sx={{ textAlign: "center" }}>
+                        <Avatar src={guardians[photoKey]} variant="rounded" sx={{ width: 65, height: 80, bgcolor: C.accentBg, border: `1px solid ${C.border}` }} />
+                        {!isReadOnly && (
+                          <Button variant="text" component="label" size="small" sx={{ fontSize: "0.55rem", p: 0, color: C.accent }}>
+                            Upload<input hidden accept="image/*" type="file" onChange={(e) => handleImageUpload(e, "guardians", photoKey)} />
+                          </Button>
+                        )}
+                      </Box>
+                      <Box sx={{ flexGrow: 1 }}>
+                        {fields.map((f) => (
+                          <TextField key={f.key} fullWidth label={f.label} value={guardians[f.key]}
+                            inputProps={{ readOnly: isReadOnly }}
+                            onChange={(e) => !isReadOnly && setGuardians({ ...guardians, [f.key]: e.target.value })}
+                            sx={inputSx(isReadOnly)} />
+                        ))}
+                      </Box>
+                    </Stack>
+                  </Grid>
+                ))}
               </Grid>
             </Paper>
 
+            {/* 03 + 04 */}
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
-              {/* 03 SCHOOLING */}
-              <Paper sx={{ flex: "1 1 45%", p: 3, bgcolor: colors.glass, border: `1px solid ${colors.border}`, borderRadius: 0 }}>
-                <Typography variant="overline" color={colors.accent} fontWeight={900}>03 // SCHOOLING</Typography>
-                <Stack spacing={1.5} sx={{ mt: 2 }}>
-                  <TextField fullWidth label="High School (10th)" placeholder="School Name"
-                    value={schooling.highSchoolName}
-                    onChange={(e) => setSchooling({ ...schooling, highSchoolName: e.target.value })}
-                    sx={inputStyles} />
-                  <TextField fullWidth label="10th Percentage"
-                    value={schooling.highSchoolPercentage}
-                    onChange={(e) => setSchooling({ ...schooling, highSchoolPercentage: e.target.value })}
-                    sx={inputStyles} />
-                  <TextField fullWidth label="Higher Secondary (12th)" placeholder="School Name"
-                    value={schooling.higherSecondaryName}
-                    onChange={(e) => setSchooling({ ...schooling, higherSecondaryName: e.target.value })}
-                    sx={inputStyles} />
-                  <TextField fullWidth label="12th Percentage"
-                    value={schooling.higherSecondaryPercentage}
-                    onChange={(e) => setSchooling({ ...schooling, higherSecondaryPercentage: e.target.value })}
-                    sx={inputStyles} />
+              {/* Schooling */}
+              <Paper sx={{ ...card, flex: "1 1 45%", p: 3 }}>
+                <Typography variant="overline" color={C.accent} fontWeight={900} letterSpacing={2}>03 — Schooling</Typography>
+                <Stack spacing={0} sx={{ mt: 1 }}>
+                  {[
+                    { label: "High School (10th)", key: "highSchoolName" },
+                    { label: "10th Percentage", key: "highSchoolPercentage" },
+                    { label: "Higher Secondary (12th)", key: "higherSecondaryName" },
+                    { label: "12th Percentage", key: "higherSecondaryPercentage" },
+                  ].map((f) => (
+                    <TextField key={f.key} fullWidth label={f.label} value={schooling[f.key]}
+                      inputProps={{ readOnly: isReadOnly }}
+                      onChange={(e) => !isReadOnly && setSchooling({ ...schooling, [f.key]: e.target.value })}
+                      sx={inputSx(isReadOnly)} />
+                  ))}
                 </Stack>
               </Paper>
 
-              {/* 04 PROFESSIONAL ASSETS */}
-              <Paper sx={{ flex: "1 1 45%", p: 3, bgcolor: colors.glass, border: `1px solid ${colors.border}`, borderRadius: 0 }}>
-                <Typography variant="overline" color={colors.accent} fontWeight={900}>04 // PROFESSIONAL_ASSETS</Typography>
-                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, my: 1.5 }}>
+              {/* Skills */}
+              <Paper sx={{ ...card, flex: "1 1 45%", p: 3 }}>
+                <Typography variant="overline" color={C.accent} fontWeight={900} letterSpacing={2}>04 — Professional Assets</Typography>
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, my: 1.5 }}>
                   {skills.map((skill) => (
                     <Chip key={skill} label={skill} size="small"
-                      onDelete={() => removeSkill(skill)}
-                      sx={{
-                        bgcolor: "rgba(112,0,255,0.1)", color: colors.accent,
-                        border: `1px solid ${colors.accent}`, borderRadius: 0,
-                        "& .MuiChip-deleteIcon": { color: colors.accent },
-                      }} />
+                      onDelete={isReadOnly ? undefined : () => removeSkill(skill)}
+                      sx={{ bgcolor: C.accentBg, color: C.accent, border: `1px solid ${C.border}`, borderRadius: "6px",
+                        "& .MuiChip-deleteIcon": { color: C.accent } }} />
                   ))}
+                  {skills.length === 0 && <Typography variant="caption" color={C.textDim} fontStyle="italic">No skills added</Typography>}
                 </Box>
-                <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
-                  <TextField fullWidth label="Add Skill"
-                    value={newSkill}
-                    onChange={(e) => setNewSkill(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addSkill()}
-                    sx={{ ...inputStyles, mb: 0 }} />
-                  <Button variant="outlined" onClick={addSkill}
-                    sx={{ borderColor: colors.accent, color: colors.accent, borderRadius: 0, minWidth: 48, mb: 2 }}>
-                    +
-                  </Button>
-                </Stack>
-                <TextField fullWidth label="New Achievement"
-                  value={newAchievement}
-                  onChange={(e) => setNewAchievement(e.target.value)}
-                  sx={inputStyles} />
-                <TextField fullWidth label="Certification Link"
-                  value={certificationLink}
-                  onChange={(e) => setCertificationLink(e.target.value)}
-                  sx={inputStyles} />
+                {!isReadOnly && (
+                  <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                    <TextField fullWidth label="Add Skill" value={newSkill}
+                      onChange={(e) => setNewSkill(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && addSkill()}
+                      sx={{ ...inputSx(false), mb: 0 }} />
+                    <Button variant="outlined" onClick={addSkill}
+                      sx={{ borderColor: C.accent, color: C.accent, borderRadius: "10px", minWidth: 48, mb: 2, textTransform: "none" }}>+</Button>
+                  </Stack>
+                )}
+                <TextField fullWidth label="Achievement" value={newAchievement} inputProps={{ readOnly: isReadOnly }}
+                  onChange={(e) => !isReadOnly && setNewAchievement(e.target.value)} sx={inputSx(isReadOnly)} />
+                <TextField fullWidth label="Certification Link" value={certificationLink} inputProps={{ readOnly: isReadOnly }}
+                  onChange={(e) => !isReadOnly && setCertificationLink(e.target.value)} sx={inputSx(isReadOnly)} />
               </Paper>
             </Box>
           </Box>
 
-          {/* ── RIGHT: Academic Ledger ─────────────────────────────────────── */}
-          <Box sx={{ flex: { xs: "1 1 100%", lg: "1 1 32%" } }}>
-            <Paper sx={{
-              p: 3, bgcolor: colors.glass, border: `1px solid ${colors.border}`,
-              borderRadius: 0, height: "100%", overflowY: "auto", maxHeight: "150vh"
-            }}>
-              <Typography variant="overline" color={colors.accent} fontWeight={900}>
-                05 // ACADEMIC_LEDGER (SEM 1-8)
+          {/* Right Column — Academic Ledger */}
+          <Box sx={{ flex: { xs: "1 1 100%", lg: "1 1 33%" } }}>
+            <Paper sx={{ ...card, p: 3, height: "100%", overflowY: "auto", maxHeight: "160vh" }}>
+              <Typography variant="overline" color={C.accent} fontWeight={900} letterSpacing={2}>
+                05 — Academic Ledger (Sem 1–8)
               </Typography>
 
-              <Stack spacing={4} sx={{ mt: 2 }}>
-                {semesters.map((sem, semIndex) => (
-                  <Box key={sem.id} sx={{ border: `1px solid ${colors.border}`, p: 2, bgcolor: "rgba(255,255,255,0.01)" }}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-                      <Typography variant="caption" sx={{ fontWeight: 900, color: colors.accent }}>
-                        SEMESTER_0{sem.id}
+              <Stack spacing={3} sx={{ mt: 2 }}>
+                {semesters.map((sem, si) => (
+                  <Box key={sem.id} sx={{ border: `1px solid ${C.border}`, borderRadius: "12px", p: 2, bgcolor: C.accentBg }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+                      <Typography variant="caption" fontWeight={900} color={C.accent}>
+                        Semester {sem.id}
                       </Typography>
-                      <TextField placeholder="GPA" size="small"
-                        value={sem.gpa}
-                        onChange={(e) => updateGpa(semIndex, e.target.value)}
-                        sx={{ width: "80px", "& .MuiInputBase-input": { p: 0.5, textAlign: "center", fontSize: "0.7rem", color: "#fff" } }} />
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <Typography variant="caption" color={C.textDim} fontWeight={600}>GPA:</Typography>
+                        <TextField placeholder="GPA" size="small" value={sem.gpa}
+                          inputProps={{ readOnly: isReadOnly }}
+                          onChange={(e) => !isReadOnly && updateGpa(si, e.target.value)}
+                          sx={{ width: "70px", "& .MuiInputBase-input": { p: 0.5, textAlign: "center", fontSize: "0.75rem", color: C.dark, fontWeight: 700 },
+                            "& .MuiOutlinedInput-root": { borderRadius: "8px", "& fieldset": { borderColor: C.border } } }} />
+                      </Stack>
                     </Stack>
 
                     <TableContainer>
                       <Table size="small">
                         <TableBody>
-                          {sem.subjects.map((sub, subIndex) => (
-                            <TableRow key={subIndex}>
-                              <TableCell sx={{ border: "none", p: 0.5 }}>
-                                <TextField variant="standard" placeholder="Code"
-                                  value={sub.code}
-                                  onChange={(e) => updateSubject(semIndex, subIndex, "code", e.target.value)}
-                                  InputProps={{ disableUnderline: true, style: { color: "rgba(255,255,255,0.5)", fontSize: "0.65rem" } }} />
+                          {sem.subjects.map((sub, subi) => (
+                            <TableRow key={subi}>
+                              <TableCell sx={{ border: "none", p: 0.4 }}>
+                                <TextField variant="standard" placeholder="Code" value={sub.code}
+                                  inputProps={{ readOnly: isReadOnly }}
+                                  onChange={(e) => !isReadOnly && updateSubject(si, subi, "code", e.target.value)}
+                                  InputProps={{ disableUnderline: true, style: { color: C.textDim, fontSize: "0.65rem" } }} />
                               </TableCell>
-                              <TableCell sx={{ border: "none", p: 0.5 }}>
-                                <TextField variant="standard" placeholder="Subject"
-                                  value={sub.name}
-                                  onChange={(e) => updateSubject(semIndex, subIndex, "name", e.target.value)}
-                                  InputProps={{ disableUnderline: true, style: { color: "#fff", fontSize: "0.65rem" } }} />
+                              <TableCell sx={{ border: "none", p: 0.4 }}>
+                                <TextField variant="standard" placeholder="Subject Name" value={sub.name}
+                                  inputProps={{ readOnly: isReadOnly }}
+                                  onChange={(e) => !isReadOnly && updateSubject(si, subi, "name", e.target.value)}
+                                  InputProps={{ disableUnderline: true, style: { color: C.dark, fontSize: "0.65rem" } }} />
                               </TableCell>
-                              <TableCell sx={{ border: "none", p: 0.5 }} align="right">
+                              <TableCell sx={{ border: "none", p: 0.4 }} align="right">
                                 <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={0.5}>
-                                  <TextField variant="standard" placeholder="Marks"
-                                    value={sub.marks}
-                                    onChange={(e) => updateSubject(semIndex, subIndex, "marks", e.target.value)}
-                                    InputProps={{ disableUnderline: true, style: { color: colors.accent, fontWeight: 900, fontSize: "0.65rem" } }}
+                                  <TextField variant="standard" placeholder="Marks" value={sub.marks}
+                                    inputProps={{ readOnly: isReadOnly }}
+                                    onChange={(e) => !isReadOnly && updateSubject(si, subi, "marks", e.target.value)}
+                                    InputProps={{ disableUnderline: true, style: { color: C.accent, fontWeight: 900, fontSize: "0.65rem" } }}
                                     sx={{ width: 48 }} />
-                                  {sem.subjects.length > 1 && (
-                                    <IconButton size="small"
-                                      onClick={() => removeSubject(semIndex, subIndex)}
-                                      sx={{ color: "rgba(255,0,0,0.4)", p: 0.25 }}>
-                                      <DeleteOutlineIcon sx={{ fontSize: "0.75rem" }} />
+                                  {!isReadOnly && sem.subjects.length > 1 && (
+                                    <IconButton size="small" onClick={() => removeSubject(si, subi)}
+                                      sx={{ color: C.danger, p: 0.25 }}>
+                                      <DeleteOutlineIcon sx={{ fontSize: "0.8rem" }} />
                                     </IconButton>
                                   )}
                                 </Stack>
@@ -533,27 +563,48 @@ const StudentHistory = () => {
                       </Table>
                     </TableContainer>
 
-                    <Button size="small"
-                      startIcon={<AddCircleOutlineIcon sx={{ fontSize: "0.8rem" }} />}
-                      onClick={() => addSubject(semIndex)}
-                      sx={{ color: "rgba(255,255,255,0.3)", fontSize: "0.6rem", mt: 1 }}>
-                      ADD_SUBJECT
-                    </Button>
+                    {!isReadOnly && (
+                      <Button size="small" startIcon={<AddCircleOutlineIcon sx={{ fontSize: "0.8rem" }} />}
+                        onClick={() => addSubject(si)}
+                        sx={{ color: C.textDim, fontSize: "0.65rem", mt: 1, textTransform: "none" }}>
+                        Add Subject
+                      </Button>
+                    )}
                   </Box>
                 ))}
 
-                {semesters.length < 8 && (
+                {!isReadOnly && semesters.length < 8 && (
                   <Button fullWidth variant="outlined" onClick={addSemester}
-                    sx={{ borderStyle: "dashed", color: colors.accent, borderColor: colors.accent }}>
-                    + INITIALIZE SEMESTER {semesters.length + 1}
+                    sx={{ borderStyle: "dashed", borderColor: C.accent, color: C.accent, borderRadius: "12px", textTransform: "none", fontWeight: 700 }}>
+                    + Add Semester {semesters.length + 1}
                   </Button>
                 )}
               </Stack>
             </Paper>
           </Box>
-
         </Box>
       </Container>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialog} onClose={() => setDeleteDialog(false)} PaperProps={{ sx: { borderRadius: "20px", p: 1 } }}>
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1, color: C.danger }}>
+          <WarningIcon /> Confirm Delete
+        </DialogTitle>
+        <DialogContent>
+          <Typography>This will permanently delete your entire student history record. This action cannot be undone.</Typography>
+        </DialogContent>
+        <DialogActions sx={{ pb: 2, px: 3, gap: 1 }}>
+          <Button onClick={() => setDeleteDialog(false)} variant="outlined"
+            sx={{ borderColor: C.border, color: C.textDim, borderRadius: "10px", textTransform: "none" }}>
+            Cancel
+          </Button>
+          <Button onClick={handleDelete} variant="contained"
+            sx={{ bgcolor: C.danger, borderRadius: "10px", textTransform: "none", fontWeight: 700,
+              "&:hover": { bgcolor: "#b71c1c" } }}>
+            Yes, Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

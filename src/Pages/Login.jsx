@@ -20,16 +20,16 @@ import gsap from "gsap";
 const Login = () => {
   const navigate = useNavigate();
 
-  // Premium Theme Colors
   const colors = {
-    bg: "#030014",
-    accent: "#7000ff",
-    glass: "rgba(255, 255, 255, 0.03)",
-    textDim: "rgba(255, 255, 255, 0.6)",
+    bg: "#f0f4ff",
+    accent: "#1565c0",
+    accentLight: "#1e88e5",
+    glass: "#ffffff",
+    textDim: "#546e7a",
+    border: "rgba(21, 101, 192, 0.18)",
   };
 
   useEffect(() => {
-    // Entrance animation for the login card
     gsap.fromTo(
       ".login-card",
       { opacity: 0, y: 30, scale: 0.95 },
@@ -49,7 +49,7 @@ const Login = () => {
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
       toast.success("Login successful!");
-      navigate("/dashboard"); // Updated to dashboard for consistent flow
+      navigate("/dashboard");
     },
     onError: (error) => {
       toast.error(error?.response?.data?.message || "Login failed");
@@ -57,18 +57,25 @@ const Login = () => {
   });
 
   const formik = useFormik({
-    initialValues: {
-      email: "",
-      password: "",
-    },
+    initialValues: { email: "", password: "" },
     validationSchema: Yup.object({
       email: Yup.string().email("Invalid email").required("Email is required"),
       password: Yup.string().required("Password is required"),
     }),
-    onSubmit: (values) => {
-      loginMutation.mutate(values);
-    },
+    onSubmit: (values) => loginMutation.mutate(values),
   });
+
+  const inputSx = {
+    "& .MuiOutlinedInput-root": {
+      borderRadius: "14px",
+      bgcolor: "#f8faff",
+      "& fieldset": { borderColor: colors.border },
+      "&:hover fieldset": { borderColor: colors.accent },
+      "&.Mui-focused fieldset": { borderColor: colors.accent },
+    },
+    "& .MuiInputLabel-root": { color: colors.textDim },
+    "& .MuiInputLabel-root.Mui-focused": { color: colors.accent },
+  };
 
   return (
     <Box
@@ -80,16 +87,16 @@ const Login = () => {
         justifyContent: "center",
         position: "relative",
         overflow: "hidden",
-        pt: 8, // Adjust for fixed navbar
+        pt: 8,
       }}
     >
-      {/* Background Decorative Glow */}
+      {/* Decorative blue glow */}
       <Box
         sx={{
           position: "absolute",
           width: "40vw",
           height: "40vw",
-          background: `radial-gradient(circle, rgba(112,0,255,0.15) 0%, transparent 70%)`,
+          background: `radial-gradient(circle, rgba(21,101,192,0.12) 0%, transparent 70%)`,
           filter: "blur(60px)",
           top: "-10%",
           right: "-10%",
@@ -100,13 +107,13 @@ const Login = () => {
       <Container maxWidth="sm" sx={{ position: "relative", zIndex: 1 }}>
         <Paper
           className="login-card"
+          elevation={0}
           sx={{
             p: { xs: 4, md: 6 },
             background: colors.glass,
-            backdropFilter: "blur(16px)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
+            border: `1px solid ${colors.border}`,
             borderRadius: "32px",
-            boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
+            boxShadow: "0 20px 60px rgba(21,101,192,0.1)",
           }}
         >
           <Stack spacing={1} alignItems="center" sx={{ mb: 4 }}>
@@ -114,7 +121,7 @@ const Login = () => {
               variant="h4"
               fontWeight={900}
               sx={{
-                background: "linear-gradient(to right, #fff, #b983ff)",
+                background: `linear-gradient(to right, ${colors.accent}, ${colors.accentLight})`,
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 letterSpacing: "-1px",
@@ -136,16 +143,7 @@ const Login = () => {
                 {...formik.getFieldProps("email")}
                 error={formik.touched.email && Boolean(formik.errors.email)}
                 helperText={formik.touched.email && formik.errors.email}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    color: "white",
-                    borderRadius: "14px",
-                    bgcolor: "rgba(255,255,255,0.03)",
-                    "& fieldset": { borderColor: "rgba(255,255,255,0.1)" },
-                    "&:hover fieldset": { borderColor: colors.accent },
-                  },
-                  "& .MuiInputLabel-root": { color: colors.textDim },
-                }}
+                sx={inputSx}
               />
 
               <TextField
@@ -156,16 +154,7 @@ const Login = () => {
                 {...formik.getFieldProps("password")}
                 error={formik.touched.password && Boolean(formik.errors.password)}
                 helperText={formik.touched.password && formik.errors.password}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    color: "white",
-                    borderRadius: "14px",
-                    bgcolor: "rgba(255,255,255,0.03)",
-                    "& fieldset": { borderColor: "rgba(255,255,255,0.1)" },
-                    "&:hover fieldset": { borderColor: colors.accent },
-                  },
-                  "& .MuiInputLabel-root": { color: colors.textDim },
-                }}
+                sx={inputSx}
               />
 
               <Button
@@ -180,33 +169,21 @@ const Login = () => {
                   fontWeight: 800,
                   fontSize: "1rem",
                   textTransform: "none",
-                  boxShadow: `0 10px 20px rgba(112,0,255,0.3)`,
-                  "&:hover": { bgcolor: "#5a00cc" },
+                  boxShadow: `0 10px 20px rgba(21,101,192,0.3)`,
+                  "&:hover": { bgcolor: colors.accentLight, transform: "translateY(-2px)", boxShadow: "0 14px 28px rgba(21,101,192,0.4)" },
+                  transition: "all 0.3s ease",
                 }}
               >
                 {loginMutation.isPending ? "Authenticating..." : "Sign In"}
               </Button>
 
-              <Divider sx={{ my: 1, borderColor: "rgba(255,255,255,0.05)" }}>
-                <Typography variant="caption" sx={{ color: colors.textDim }}>
-                  OR
-                </Typography>
+              <Divider sx={{ my: 1, borderColor: colors.border }}>
+                <Typography variant="caption" sx={{ color: colors.textDim }}>OR</Typography>
               </Divider>
 
-              <Typography
-                variant="body2"
-                align="center"
-                sx={{ color: colors.textDim }}
-              >
+              <Typography variant="body2" align="center" sx={{ color: colors.textDim }}>
                 Don't have an account?{" "}
-                <Link
-                  to="/register"
-                  style={{
-                    color: colors.accent,
-                    textDecoration: "none",
-                    fontWeight: 700,
-                  }}
-                >
+                <Link to="/register" style={{ color: colors.accent, textDecoration: "none", fontWeight: 700 }}>
                   Create one now
                 </Link>
               </Typography>

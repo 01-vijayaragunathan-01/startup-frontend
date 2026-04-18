@@ -21,16 +21,16 @@ import gsap from "gsap";
 const Register = () => {
   const navigate = useNavigate();
 
-  // Premium Theme Colors
   const colors = {
-    bg: "#030014",
-    accent: "#7000ff",
-    glass: "rgba(255, 255, 255, 0.03)",
-    textDim: "rgba(255, 255, 255, 0.6)",
+    bg: "#f0f4ff",
+    accent: "#1565c0",
+    accentLight: "#1e88e5",
+    glass: "#ffffff",
+    textDim: "#546e7a",
+    border: "rgba(21, 101, 192, 0.18)",
   };
 
   useEffect(() => {
-    // Entrance animation for the registration card
     gsap.fromTo(
       ".register-card",
       { opacity: 0, y: 40, scale: 0.9 },
@@ -46,7 +46,7 @@ const Register = () => {
       );
       return res.data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast.success("Registered successfully!");
       navigate("/login");
     },
@@ -56,36 +56,25 @@ const Register = () => {
   });
 
   const formik = useFormik({
-    initialValues: {
-      name: "",
-      email: "",
-      password: "",
-      role: "student",
-    },
+    initialValues: { name: "", email: "", password: "", role: "student" },
     validationSchema: Yup.object({
       name: Yup.string().required("Name is required"),
       email: Yup.string().email("Invalid email").required("Email is required"),
-      password: Yup.string()
-        .min(6, "Must be at least 6 characters")
-        .required("Password is required"),
+      password: Yup.string().min(6, "Must be at least 6 characters").required("Password is required"),
     }),
-    onSubmit: (values) => {
-      registerMutation.mutate(values);
-    },
+    onSubmit: (values) => registerMutation.mutate(values),
   });
 
-  // Reusable input styles to match your Login/Home aesthetic
   const inputStyles = {
     "& .MuiOutlinedInput-root": {
-      color: "white",
       borderRadius: "14px",
-      bgcolor: "rgba(255,255,255,0.03)",
-      "& fieldset": { borderColor: "rgba(255,255,255,0.1)" },
+      bgcolor: "#f8faff",
+      "& fieldset": { borderColor: colors.border },
       "&:hover fieldset": { borderColor: colors.accent },
       "&.Mui-focused fieldset": { borderColor: colors.accent },
     },
     "& .MuiInputLabel-root": { color: colors.textDim },
-    "& .MuiSelect-icon": { color: "white" },
+    "& .MuiInputLabel-root.Mui-focused": { color: colors.accent },
     mb: 2.5,
   };
 
@@ -102,13 +91,13 @@ const Register = () => {
         py: 8,
       }}
     >
-      {/* Background Decorative Glow */}
+      {/* Decorative blue glow */}
       <Box
         sx={{
           position: "absolute",
           width: "50vw",
           height: "50vw",
-          background: `radial-gradient(circle, rgba(112,0,255,0.1) 0%, transparent 70%)`,
+          background: `radial-gradient(circle, rgba(21,101,192,0.1) 0%, transparent 70%)`,
           filter: "blur(80px)",
           bottom: "-15%",
           left: "-10%",
@@ -119,13 +108,13 @@ const Register = () => {
       <Container maxWidth="sm" sx={{ position: "relative", zIndex: 1 }}>
         <Paper
           className="register-card"
+          elevation={0}
           sx={{
             p: { xs: 4, md: 5 },
             background: colors.glass,
-            backdropFilter: "blur(20px)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
+            border: `1px solid ${colors.border}`,
             borderRadius: "32px",
-            boxShadow: "0 25px 50px rgba(0,0,0,0.5)",
+            boxShadow: "0 25px 60px rgba(21,101,192,0.12)",
           }}
         >
           <Stack spacing={1} alignItems="center" sx={{ mb: 4 }}>
@@ -133,7 +122,7 @@ const Register = () => {
               variant="h4"
               fontWeight={900}
               sx={{
-                background: "linear-gradient(to right, #fff, #b983ff)",
+                background: `linear-gradient(to right, ${colors.accent}, ${colors.accentLight})`,
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 letterSpacing: "-1px",
@@ -148,47 +137,39 @@ const Register = () => {
 
           <form onSubmit={formik.handleSubmit}>
             <TextField
-              fullWidth
-              label="Full Name"
+              fullWidth label="Full Name"
               {...formik.getFieldProps("name")}
               error={formik.touched.name && Boolean(formik.errors.name)}
               helperText={formik.touched.name && formik.errors.name}
               sx={inputStyles}
             />
-
             <TextField
-              fullWidth
-              label="Email Address"
+              fullWidth label="Email Address"
               {...formik.getFieldProps("email")}
               error={formik.touched.email && Boolean(formik.errors.email)}
               helperText={formik.touched.email && formik.errors.email}
               sx={inputStyles}
             />
-
             <TextField
-              fullWidth
-              label="Password"
-              type="password"
+              fullWidth label="Password" type="password"
               {...formik.getFieldProps("password")}
               error={formik.touched.password && Boolean(formik.errors.password)}
               helperText={formik.touched.password && formik.errors.password}
               sx={inputStyles}
             />
-
             <TextField
-              select
-              fullWidth
-              label="I am a..."
+              select fullWidth label="I am a..."
               {...formik.getFieldProps("role")}
               sx={inputStyles}
               SelectProps={{
                 MenuProps: {
                   PaperProps: {
                     sx: {
-                      bgcolor: "#0a0520",
-                      color: "white",
+                      bgcolor: "#fff",
+                      color: "#1a237e",
                       borderRadius: "12px",
-                      border: "1px solid rgba(255,255,255,0.1)",
+                      border: `1px solid ${colors.border}`,
+                      boxShadow: "0 8px 24px rgba(21,101,192,0.12)",
                     },
                   },
                 },
@@ -211,11 +192,11 @@ const Register = () => {
                 fontWeight: 800,
                 fontSize: "1rem",
                 textTransform: "none",
-                boxShadow: `0 15px 30px rgba(112,0,255,0.3)`,
+                boxShadow: `0 10px 24px rgba(21,101,192,0.3)`,
                 "&:hover": {
-                  bgcolor: "#5a00cc",
+                  bgcolor: colors.accentLight,
                   transform: "translateY(-2px)",
-                  boxShadow: `0 20px 40px rgba(112,0,255,0.4)`,
+                  boxShadow: `0 16px 32px rgba(21,101,192,0.4)`,
                 },
                 transition: "all 0.3s ease",
               }}
@@ -223,26 +204,15 @@ const Register = () => {
               {registerMutation.isPending ? "Creating Account..." : "Join Now"}
             </Button>
 
-            <Divider sx={{ my: 3, borderColor: "rgba(255,255,255,0.05)" }}>
+            <Divider sx={{ my: 3, borderColor: colors.border }}>
               <Typography variant="caption" sx={{ color: colors.textDim }}>
                 ALREADY HAVE AN ACCOUNT?
               </Typography>
             </Divider>
 
-            <Typography
-              variant="body2"
-              align="center"
-              sx={{ color: colors.textDim }}
-            >
+            <Typography variant="body2" align="center" sx={{ color: colors.textDim }}>
               Ready to mastery?{" "}
-              <Link
-                to="/login"
-                style={{
-                  color: colors.accent,
-                  textDecoration: "none",
-                  fontWeight: 700,
-                }}
-              >
+              <Link to="/login" style={{ color: colors.accent, textDecoration: "none", fontWeight: 700 }}>
                 Log In
               </Link>
             </Typography>

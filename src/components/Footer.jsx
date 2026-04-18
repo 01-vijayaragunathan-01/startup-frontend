@@ -14,12 +14,12 @@ import TwitterIcon from "@mui/icons-material/Twitter";
 import LanguageIcon from "@mui/icons-material/Language";
 
 const Footer = () => {
-  // Theme Constants to match Home.jsx
   const colors = {
-    bg: "#030014",
-    accent: "#7000ff",
-    textDim: "rgba(255, 255, 255, 0.6)",
-    glassBorder: "rgba(255, 255, 255, 0.08)",
+    bg: "#f0f4ff",
+    accent: "#1565c0",
+    accentLight: "#1e88e5",
+    textDim: "#546e7a",
+    border: "rgba(21, 101, 192, 0.12)",
   };
 
   const footerLinkStyle = {
@@ -40,7 +40,7 @@ const Footer = () => {
         bgcolor: colors.bg,
         pt: 10,
         pb: 4,
-        borderTop: `1px solid ${colors.glassBorder}`,
+        borderTop: `1px solid ${colors.border}`,
         position: "relative",
         zIndex: 2,
       }}
@@ -54,7 +54,7 @@ const Footer = () => {
               fontWeight={900}
               sx={{
                 mb: 2,
-                background: "linear-gradient(to right, #fff, #b983ff)",
+                background: `linear-gradient(to right, ${colors.accent}, ${colors.accentLight})`,
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 letterSpacing: -1,
@@ -65,7 +65,7 @@ const Footer = () => {
               Mentor Mentee
             </Typography>
             <Typography variant="body2" sx={{ color: colors.textDim, mb: 3, lineHeight: 1.8 }}>
-              Empowering the next generation of engineers through high-precision 
+              Empowering the next generation of engineers through high-precision
               matchmaking and real-time collaborative mentorship.
             </Typography>
             <Stack direction="row" spacing={1}>
@@ -78,11 +78,12 @@ const Footer = () => {
                 <IconButton
                   key={i}
                   sx={{
-                    color: "white",
-                    bgcolor: "rgba(255,255,255,0.03)",
-                    border: `1px solid ${colors.glassBorder}`,
+                    color: colors.accent,
+                    bgcolor: "#fff",
+                    border: `1px solid ${colors.border}`,
                     "&:hover": {
                       bgcolor: colors.accent,
+                      color: "#fff",
                       borderColor: colors.accent,
                       transform: "translateY(-3px)",
                     },
@@ -96,37 +97,31 @@ const Footer = () => {
 
           {/* Quick Links */}
           <Grid item xs={6} md={2}>
-            <Typography variant="subtitle1" fontWeight={800} sx={{ mb: 3, color: "white" }}>
+            <Typography variant="subtitle1" fontWeight={800} sx={{ mb: 3, color: "#1a237e" }}>
               Platform
             </Typography>
             <Stack spacing={2}>
               {["Find Mentors", "How it Works", "Pricing", "Success Stories"].map((text) => (
-                <Typography key={text} sx={footerLinkStyle}>
-                  {text}
-                </Typography>
+                <Typography key={text} sx={footerLinkStyle}>{text}</Typography>
               ))}
             </Stack>
           </Grid>
 
           {/* Support */}
           <Grid item xs={6} md={2}>
-            <Typography variant="subtitle1" fontWeight={800} sx={{ mb: 3, color: "white" }}>
+            <Typography variant="subtitle1" fontWeight={800} sx={{ mb: 3, color: "#1a237e" }}>
               Support
             </Typography>
             <Stack spacing={2}>
               {["Help Center", "Safety Center", "Community Guidelines", "Contact Us"].map((text) => (
-                <Typography key={text} sx={footerLinkStyle}>
-                  {text}
-                </Typography>
+                <Typography key={text} sx={footerLinkStyle}>{text}</Typography>
               ))}
             </Stack>
           </Grid>
-
         </Grid>
 
-        <Divider sx={{ my: 6, borderColor: "rgba(255,255,255,0.05)" }} />
+        <Divider sx={{ my: 6, borderColor: colors.border }} />
 
-        {/* Legal & Copyright */}
         <Stack
           direction={{ xs: "column", md: "row" }}
           justifyContent="space-between"
@@ -141,11 +136,7 @@ const Footer = () => {
               <Typography
                 key={text}
                 variant="caption"
-                sx={{
-                  color: colors.textDim,
-                  cursor: "pointer",
-                  "&:hover": { color: colors.accent },
-                }}
+                sx={{ color: colors.textDim, cursor: "pointer", "&:hover": { color: colors.accent } }}
               >
                 {text}
               </Typography>
@@ -153,17 +144,6 @@ const Footer = () => {
           </Stack>
         </Stack>
       </Container>
-
-      {/* Animation Styles */}
-      <style>
-        {`
-          @keyframes pulse {
-            0% { transform: scale(0.95); opacity: 0.8; }
-            70% { transform: scale(1.1); opacity: 1; }
-            100% { transform: scale(0.95); opacity: 0.8; }
-          }
-        `}
-      </style>
     </Box>
   );
 };
