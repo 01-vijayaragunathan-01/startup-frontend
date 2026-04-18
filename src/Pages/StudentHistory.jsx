@@ -183,15 +183,33 @@ const StudentHistory = () => {
     }
   };
 
-  const handleImageUpload = (e, section, field) => {
+  // Upload photo to backend → get a hosted URL back
+  const handleImageUpload = async (e, section, field) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // Show local preview immediately
     const reader = new FileReader();
     reader.onloadend = () => {
       if (section === "identity") setIdentity((p) => ({ ...p, [field]: reader.result }));
       else setGuardians((p) => ({ ...p, [field]: reader.result }));
     };
     reader.readAsDataURL(file);
+
+    // Also upload to backend and replace with hosted URL once done
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await axios.post(`${BASE_URL}/api/upload/image`, fd, {
+        headers: { "Content-Type": "multipart/form-data", ...authHeaders },
+      });
+      const url = res.data.url;
+      if (section === "identity") setIdentity((p) => ({ ...p, [field]: url }));
+      else setGuardians((p) => ({ ...p, [field]: url }));
+    } catch {
+      // Upload failed — local preview still shows; base64 will be stripped on save
+      console.warn("Photo upload failed — local preview only, not persisted.");
+    }
   };
 
   const loadRecord = useCallback(async () => {
@@ -217,10 +235,31 @@ const StudentHistory = () => {
 
   useEffect(() => { loadRecord(); }, [loadRecord]);
 
-  const buildPayload = () => ({
-    ...identity, guardians, schooling, skills, newAchievement, certificationLink,
-    semesters: semesters.map((s) => ({ semesterNumber: s.semesterNumber || s.id, gpa: s.gpa, subjects: s.subjects })),
-  });
+  // Strip raw base64 blobs from payload — only send hosted URLs
+  const stripBase64 = (val) =>
+    typeof val === "string" && val.startsWith("data:") ? "" : val;
+
+  const buildPayload = () => {
+    const safeIdentity = Object.fromEntries(
+      Object.entries(identity).map(([k, v]) => [k, stripBase64(v)])
+    );
+    const safeGuardians = Object.fromEntries(
+      Object.entries(guardians).map(([k, v]) => [k, stripBase64(v)])
+    );
+    return {
+      ...safeIdentity,
+      guardians: safeGuardians,
+      schooling,
+      skills,
+      newAchievement,
+      certificationLink,
+      semesters: semesters.map((s) => ({
+        semesterNumber: s.semesterNumber || s.id,
+        gpa: s.gpa,
+        subjects: s.subjects,
+      })),
+    };
+  };
 
   const handleSync = async () => {
     setSaving(true);
@@ -236,8 +275,16 @@ const StudentHistory = () => {
       }
       if (responseData) hydrateForm(responseData);
     } catch (err) {
-      if (err.response?.status === 409) { setIsNew(false); setSaving(false); handleSync(); return; }
-      toast.error(err.response?.data?.message || "Failed to save.");
+      const status = err.response?.status;
+      if (status === 409) { setIsNew(false); setSaving(false); handleSync(); return; }
+      if (status === 413) {
+        toast.error("Payload too large — photos were too big. Please try again (photos will be skipped if upload failed).");
+      } else if (status === 404) {
+        // Record not found on PUT → try creating instead
+        setIsNew(true); setSaving(false); handleSync(); return;
+      } else {
+        toast.error(err.response?.data?.message || `Failed to save (error ${status || "unknown"}).`);
+      }
     } finally { setSaving(false); }
   };
 
