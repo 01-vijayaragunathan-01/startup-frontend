@@ -39,9 +39,11 @@ const Navbar = () => {
   const isActive = (path) => location.pathname === path;
 
   const navLinks = [
-    { label: "Home",      to: "/" },
-    { label: "Courses",   to: "/courses", icon: <SchoolIcon sx={{ fontSize: 16 }} /> },
-    ...(user ? [{ label: "Dashboard", to: "/dashboard" }] : []),
+    { label: "Home", to: "/" },
+    ...(user ? [
+      { label: "Courses",   to: "/courses",   icon: <SchoolIcon sx={{ fontSize: 16 }} /> },
+      { label: "Dashboard", to: "/dashboard" },
+    ] : []),
   ];
 
   return (
