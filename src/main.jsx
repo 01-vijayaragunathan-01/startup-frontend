@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import { AuthProvider } from "./Context/AuthContext";
+import { UnreadProvider } from "./Context/UnreadContext";
 import { Toaster } from "react-hot-toast";
 
 //Import TanStack Query
@@ -19,8 +20,10 @@ createRoot(document.getElementById('root')).render(
   <BrowserRouter>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <App />
-        <Toaster position="top-center" reverseOrder={false} />
+        <UnreadProvider>
+          <App />
+          <Toaster position="top-center" reverseOrder={false} />
+        </UnreadProvider>
       </AuthProvider>
     </QueryClientProvider>
   </BrowserRouter>

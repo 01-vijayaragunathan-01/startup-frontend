@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   Box, TextField, IconButton, Typography, Avatar, Stack, Tooltip,
-  Menu, MenuItem, Divider, CircularProgress, Container, Paper,
+  Menu, MenuItem, CircularProgress, Container, Paper,
 } from "@mui/material";
-import SendIcon      from "@mui/icons-material/Send";
-import ImageIcon     from "@mui/icons-material/Image";
+import SendIcon          from "@mui/icons-material/Send";
+import ImageIcon         from "@mui/icons-material/Image";
 import EmojiEmotionsIcon from "@mui/icons-material/EmojiEmotions";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import CloseIcon         from "@mui/icons-material/Close";
@@ -14,6 +14,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { useUnread } from "../Context/UnreadContext";
 
 const BASE_URL = "https://startup-backend-1-cj33.onrender.com";
 const socket   = io(BASE_URL, { transports: ["websocket"] });
@@ -47,13 +48,15 @@ const ChatPage = () => {
   const user  = JSON.parse(localStorage.getItem("user") || "{}");
   const token = localStorage.getItem("token");
 
+  const { markRead } = useUnread();
+
   const [messages,        setMessages]        = useState([]);
   const [input,           setInput]           = useState("");
   const [receiverDetails, setReceiverDetails] = useState(null);
   const [showEmoji,       setShowEmoji]       = useState(false);
   const [sending,         setSending]         = useState(false);
-  const [imagePreview,    setImagePreview]    = useState(null); // { file, dataUrl }
-  const [contextMenu,     setContextMenu]     = useState(null); // { mouseX, mouseY, msgId }
+  const [imagePreview,    setImagePreview]    = useState(null);
+  const [contextMenu,     setContextMenu]     = useState(null);
 
   const scrollRef  = useRef(null);
   const fileRef    = useRef(null);
@@ -80,6 +83,8 @@ const ChatPage = () => {
   useEffect(() => {
     if (!user?._id || !receiverId) return;
     socket.emit("join", user._id);
+    // Mark messages from this sender as read immediately
+    if (receiverId) markRead(receiverId);
 
     const fetchData = async () => {
       try {
@@ -97,7 +102,10 @@ const ChatPage = () => {
 
     const handleReceive = (msg) => {
       setMessages((prev) => [...prev, msg]);
-      if (getId(msg.sender) !== getId(user._id)) {
+      const senderId = typeof msg.sender === "object" ? msg.sender._id : msg.sender;
+      if (String(senderId) !== String(user._id)) {
+        // Auto-mark read since user is currently in this chat
+        if (String(senderId) === String(receiverId)) markRead(receiverId);
         toast.success(`New message from ${receiverName}`, {
           icon: "📩",
           style: { borderRadius: "12px", background: C.dark, color: "#fff", border: `1px solid ${C.border}` },

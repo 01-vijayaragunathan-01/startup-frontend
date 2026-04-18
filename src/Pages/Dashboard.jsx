@@ -20,6 +20,7 @@ import PeopleIcon             from "@mui/icons-material/People";
 import InboxIcon              from "@mui/icons-material/Inbox";
 import StarIcon               from "@mui/icons-material/Star";
 import LinkIcon               from "@mui/icons-material/Link";
+import { useUnread }          from "../Context/UnreadContext";
 
 const BASE_URL = "https://startup-backend-1-cj33.onrender.com";
 
@@ -144,6 +145,7 @@ const Dashboard = () => {
   const navigate    = useNavigate();
   const authHeaders = { Authorization: `Bearer ${token}` };
   const isMentor    = user?.role === "mentor";
+  const { unreadBySender, markRead } = useUnread();
 
   useEffect(() => {
     AOS.init({ duration: 800, once: true });
@@ -492,19 +494,55 @@ const Dashboard = () => {
                   <Empty text="No messages yet." />
                 ) : (
                   <Stack spacing={0.5}>
-                    {recentChats.filter((p) => p?.name).map((person) => (
-                      <Box key={person._id}
-                        sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 1.2, borderRadius: "12px", cursor: "pointer",
-                          "&:hover": { bgcolor: C.accentBg } }}
-                        onClick={() => navigate("/chat", { state: { receiverId: person._id, receiverName: person.name } })}>
-                        <Avatar src={person.avatar}
-                          sx={{ width: 36, height: 36, bgcolor: C.accent, fontWeight: 900, fontSize: 14 }}>
-                          {person.name?.[0]?.toUpperCase()}
-                        </Avatar>
-                        <Typography variant="body2" fontWeight={600} color={C.dark}>{person.name}</Typography>
-                        <ChatBubbleOutlineIcon sx={{ ml: "auto", color: C.accentLight, fontSize: 16 }} />
-                      </Box>
-                    ))}
+                    {recentChats.filter((p) => p?.name).map((person) => {
+                      const unread = unreadBySender[person._id] || 0;
+                      return (
+                        <Box key={person._id}
+                          sx={{
+                            display: "flex", alignItems: "center", gap: 1.5,
+                            p: 1.2, borderRadius: "12px", cursor: "pointer",
+                            position: "relative",
+                            bgcolor: unread > 0 ? "rgba(21,101,192,0.06)" : "transparent",
+                            border: unread > 0 ? `1px solid ${C.border}` : "1px solid transparent",
+                            "&:hover": { bgcolor: C.accentBg },
+                            transition: "all 0.2s",
+                          }}
+                          onClick={() => {
+                            markRead(person._id);
+                            navigate("/chat", { state: { receiverId: person._id, receiverName: person.name } });
+                          }}>
+                          <Box sx={{ position: "relative" }}>
+                            <Avatar src={person.avatar}
+                              sx={{ width: 38, height: 38, bgcolor: C.accent, fontWeight: 900, fontSize: 14 }}>
+                              {person.name?.[0]?.toUpperCase()}
+                            </Avatar>
+                            {unread > 0 && (
+                              <Box sx={{
+                                position: "absolute", top: -4, right: -4,
+                                width: 18, height: 18, borderRadius: "50%",
+                                bgcolor: "#e53935", border: "2px solid #fff",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                              }}>
+                                <Typography sx={{ fontSize: "0.52rem", color: "#fff", fontWeight: 900, lineHeight: 1 }}>
+                                  {unread > 9 ? "9+" : unread}
+                                </Typography>
+                              </Box>
+                            )}
+                          </Box>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="body2" fontWeight={unread > 0 ? 800 : 600} color={C.dark} noWrap>
+                              {person.name}
+                            </Typography>
+                            {unread > 0 && (
+                              <Typography variant="caption" color={C.accent} fontWeight={700}>
+                                {unread} new message{unread > 1 ? "s" : ""}
+                              </Typography>
+                            )}
+                          </Box>
+                          <ChatBubbleOutlineIcon sx={{ color: unread > 0 ? C.accent : C.border, fontSize: 16, flexShrink: 0 }} />
+                        </Box>
+                      );
+                    })}
                   </Stack>
                 )}
               </Paper>
