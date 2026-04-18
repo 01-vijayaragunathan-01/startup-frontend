@@ -120,18 +120,45 @@ const CourseCard = ({ course, isMentor, onEdit, onDelete }) => {
         <Divider sx={{ borderColor: C.border, mb: 2 }} />
 
         {/* Actions */}
-        <Stack direction="row" spacing={1}>
+        <Stack direction="row" spacing={1} flexWrap="wrap">
           {isPdf ? (
-            <Button fullWidth variant="contained" size="small" startIcon={<DownloadIcon />}
-              onClick={() => window.open(course.fileUrl, "_blank")}
-              sx={{ bgcolor: C.pdf, borderRadius: "10px", textTransform: "none", fontWeight: 700,
-                fontSize: "0.78rem", "&:hover": { bgcolor: "#bf360c" } }}>
-              Download PDF
-            </Button>
+            <>
+              {/* View PDF — open in new tab */}
+              <Button flex={1} variant="outlined" size="small"
+                startIcon={<PictureAsPdfIcon />}
+                onClick={() => window.open(course.fileUrl, "_blank")}
+                sx={{ borderColor: C.pdf, color: C.pdf, borderRadius: "9px", textTransform: "none",
+                  fontWeight: 700, fontSize: "0.72rem", flex: 1,
+                  "&:hover": { bgcolor: C.pdfBg } }}>
+                View PDF
+              </Button>
+              {/* Download PDF — proxy through fetch to avoid 401 */}
+              <Button flex={1} variant="contained" size="small"
+                startIcon={<DownloadIcon />}
+                onClick={async () => {
+                  try {
+                    const r = await fetch(course.fileUrl);
+                    if (!r.ok) throw new Error("fetch failed");
+                    const blob = await r.blob();
+                    const a    = document.createElement("a");
+                    a.href     = URL.createObjectURL(blob);
+                    a.download = (course.title || "document") + ".pdf";
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                  } catch {
+                    // fallback: open directly
+                    window.open(course.fileUrl, "_blank");
+                  }
+                }}
+                sx={{ bgcolor: C.pdf, borderRadius: "9px", textTransform: "none", fontWeight: 700,
+                  fontSize: "0.72rem", flex: 1, "&:hover": { bgcolor: "#bf360c" } }}>
+                Download
+              </Button>
+            </>
           ) : (
             <Button fullWidth variant="contained" size="small" startIcon={<PlayCircleIcon />}
               onClick={() => window.open(course.fileUrl, "_blank")}
-              sx={{ bgcolor: C.accent, borderRadius: "10px", textTransform: "none", fontWeight: 700,
+              sx={{ bgcolor: C.accent, borderRadius: "9px", textTransform: "none", fontWeight: 700,
                 fontSize: "0.78rem", "&:hover": { bgcolor: C.accentAlt } }}>
               Watch Video
             </Button>
@@ -141,14 +168,14 @@ const CourseCard = ({ course, isMentor, onEdit, onDelete }) => {
             <>
               <Tooltip title="Edit">
                 <IconButton size="small" onClick={() => onEdit(course)}
-                  sx={{ border: `1px solid ${C.border}`, borderRadius: "10px", color: C.accent,
+                  sx={{ border: `1px solid ${C.border}`, borderRadius: "9px", color: C.accent,
                     "&:hover": { bgcolor: C.accentBg } }}>
                   <EditIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
               <Tooltip title="Delete">
                 <IconButton size="small" onClick={() => onDelete(course)}
-                  sx={{ border: `1px solid rgba(198,40,40,0.2)`, borderRadius: "10px", color: C.danger,
+                  sx={{ border: "1px solid rgba(198,40,40,0.2)", borderRadius: "9px", color: C.danger,
                     "&:hover": { bgcolor: C.dangerBg } }}>
                   <DeleteIcon fontSize="small" />
                 </IconButton>
