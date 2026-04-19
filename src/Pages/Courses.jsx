@@ -123,7 +123,7 @@ const CourseCard = ({ course, isMentor, onEdit, onDelete }) => {
         <Stack direction="row" spacing={1} flexWrap="wrap">
           {isPdf ? (
           <>
-              {/* View PDF — get signed URL first, then open in new tab */}
+              {/* View PDF — stream through backend proxy, open as blob in new tab */}
               <Button flex={1} variant="outlined" size="small"
                 startIcon={<PictureAsPdfIcon />}
                 onClick={async () => {
@@ -131,16 +131,19 @@ const CourseCard = ({ course, isMentor, onEdit, onDelete }) => {
                   try {
                     const token = localStorage.getItem("token");
                     const res = await fetch(
-                      `${BASE_URL}/api/courses/${course._id}/signed-url?disposition=inline`,
+                      `${BASE_URL}/api/courses/${course._id}/pdf-stream?disposition=inline`,
                       { headers: { Authorization: `Bearer ${token}` } }
                     );
-                    if (!res.ok) throw new Error("Failed to get URL");
-                    const { url } = await res.json();
+                    if (!res.ok) throw new Error(`Server ${res.status}`);
+                    const blob    = await res.blob();
+                    const blobUrl = URL.createObjectURL(blob);
                     toast.dismiss(tid);
-                    window.open(url, "_blank");
-                  } catch {
+                    window.open(blobUrl, "_blank");
+                    // Revoke after a short delay so the tab can load it
+                    setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+                  } catch (e) {
                     toast.dismiss(tid);
-                    toast.error("Could not open PDF. Please try again.");
+                    toast.error("Could not open PDF: " + e.message);
                   }
                 }}
                 sx={{ borderColor: C.pdf, color: C.pdf, borderRadius: "9px", textTransform: "none",
@@ -148,7 +151,7 @@ const CourseCard = ({ course, isMentor, onEdit, onDelete }) => {
                   "&:hover": { bgcolor: C.pdfBg } }}>
                 View PDF
               </Button>
-              {/* Download PDF — get signed attachment URL then trigger download */}
+              {/* Download PDF — stream through backend proxy, trigger save dialog */}
               <Button flex={1} variant="contained" size="small"
                 startIcon={<DownloadIcon />}
                 onClick={async () => {
@@ -156,20 +159,24 @@ const CourseCard = ({ course, isMentor, onEdit, onDelete }) => {
                   try {
                     const token = localStorage.getItem("token");
                     const res = await fetch(
-                      `${BASE_URL}/api/courses/${course._id}/signed-url?disposition=attachment`,
+                      `${BASE_URL}/api/courses/${course._id}/pdf-stream?disposition=attachment`,
                       { headers: { Authorization: `Bearer ${token}` } }
                     );
-                    if (!res.ok) throw new Error("Failed to get URL");
-                    const { url } = await res.json();
-                    toast.dismiss(tid);
-                    const a    = document.createElement("a");
-                    a.href     = url;
-                    a.target   = "_blank";  // open in new tab so download starts cleanly
-                    a.download = (course.title || "document") + ".pdf";
+                    if (!res.ok) throw new Error(`Server ${res.status}`);
+                    const blob    = await res.blob();
+                    const blobUrl = URL.createObjectURL(blob);
+                    const a       = document.createElement("a");
+                    a.href        = blobUrl;
+                    a.download    = (course.title || "document") + ".pdf";
+                    document.body.appendChild(a);
                     a.click();
-                  } catch {
+                    document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
                     toast.dismiss(tid);
-                    toast.error("Could not download PDF. Please try again.");
+                    toast.success("Download started!");
+                  } catch (e) {
+                    toast.dismiss(tid);
+                    toast.error("Could not download PDF: " + e.message);
                   }
                 }}
                 sx={{ bgcolor: C.pdf, borderRadius: "9px", textTransform: "none", fontWeight: 700,
