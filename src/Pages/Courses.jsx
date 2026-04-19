@@ -123,61 +123,30 @@ const CourseCard = ({ course, isMentor, onEdit, onDelete }) => {
         <Stack direction="row" spacing={1} flexWrap="wrap">
           {isPdf ? (
           <>
-              {/* View PDF — stream through backend proxy, open as blob in new tab */}
+              {/* View PDF — open backend stream URL in new tab (inline) */}
               <Button flex={1} variant="outlined" size="small"
                 startIcon={<PictureAsPdfIcon />}
-                onClick={async () => {
-                  const tid = toast.loading("Opening PDF…");
-                  try {
-                    const token = localStorage.getItem("token");
-                    const res = await fetch(
-                      `${BASE_URL}/api/courses/${course._id}/pdf-stream?disposition=inline`,
-                      { headers: { Authorization: `Bearer ${token}` } }
-                    );
-                    if (!res.ok) throw new Error(`Server ${res.status}`);
-                    const blob    = await res.blob();
-                    const blobUrl = URL.createObjectURL(blob);
-                    toast.dismiss(tid);
-                    window.open(blobUrl, "_blank");
-                    // Revoke after a short delay so the tab can load it
-                    setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-                  } catch (e) {
-                    toast.dismiss(tid);
-                    toast.error("Could not open PDF: " + e.message);
-                  }
+                onClick={() => {
+                  const token = localStorage.getItem("token");
+                  window.open(
+                    `${BASE_URL}/api/courses/${course._id}/pdf-stream?disposition=inline&token=${token}`,
+                    "_blank"
+                  );
                 }}
                 sx={{ borderColor: C.pdf, color: C.pdf, borderRadius: "9px", textTransform: "none",
                   fontWeight: 700, fontSize: "0.72rem", flex: 1,
                   "&:hover": { bgcolor: C.pdfBg } }}>
                 View PDF
               </Button>
-              {/* Download PDF — stream through backend proxy, trigger save dialog */}
+              {/* Download PDF — same endpoint with disposition=attachment triggers browser save dialog */}
               <Button flex={1} variant="contained" size="small"
                 startIcon={<DownloadIcon />}
-                onClick={async () => {
-                  const tid = toast.loading("Preparing download…");
-                  try {
-                    const token = localStorage.getItem("token");
-                    const res = await fetch(
-                      `${BASE_URL}/api/courses/${course._id}/pdf-stream?disposition=attachment`,
-                      { headers: { Authorization: `Bearer ${token}` } }
-                    );
-                    if (!res.ok) throw new Error(`Server ${res.status}`);
-                    const blob    = await res.blob();
-                    const blobUrl = URL.createObjectURL(blob);
-                    const a       = document.createElement("a");
-                    a.href        = blobUrl;
-                    a.download    = (course.title || "document") + ".pdf";
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
-                    toast.dismiss(tid);
-                    toast.success("Download started!");
-                  } catch (e) {
-                    toast.dismiss(tid);
-                    toast.error("Could not download PDF: " + e.message);
-                  }
+                onClick={() => {
+                  const token = localStorage.getItem("token");
+                  window.open(
+                    `${BASE_URL}/api/courses/${course._id}/pdf-stream?disposition=attachment&token=${token}`,
+                    "_blank"
+                  );
                 }}
                 sx={{ bgcolor: C.pdf, borderRadius: "9px", textTransform: "none", fontWeight: 700,
                   fontSize: "0.72rem", flex: 1, "&:hover": { bgcolor: "#bf360c" } }}>
