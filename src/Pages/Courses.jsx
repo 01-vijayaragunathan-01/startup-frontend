@@ -123,30 +123,50 @@ const CourseCard = ({ course, isMentor, onEdit, onDelete }) => {
         <Stack direction="row" spacing={1} flexWrap="wrap">
           {isPdf ? (
           <>
-              {/* View PDF — open backend stream URL in new tab (inline) */}
+              {/* View PDF — get signed URL then open in new tab */}
               <Button flex={1} variant="outlined" size="small"
                 startIcon={<PictureAsPdfIcon />}
-                onClick={() => {
-                  const token = localStorage.getItem("token");
-                  window.open(
-                    `${BASE_URL}/api/courses/${course._id}/pdf-stream?disposition=inline&token=${token}`,
-                    "_blank"
-                  );
+                onClick={async () => {
+                  const tid = toast.loading("Opening PDF…");
+                  try {
+                    const token = localStorage.getItem("token");
+                    const r = await fetch(
+                      `${BASE_URL}/api/courses/${course._id}/pdf-url?disposition=inline`,
+                      { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                    const data = await r.json();
+                    if (!r.ok || !data.url) throw new Error(data.message || "Failed");
+                    toast.dismiss(tid);
+                    window.open(data.url, "_blank");
+                  } catch (e) {
+                    toast.dismiss(tid);
+                    toast.error("Could not open PDF: " + e.message);
+                  }
                 }}
                 sx={{ borderColor: C.pdf, color: C.pdf, borderRadius: "9px", textTransform: "none",
                   fontWeight: 700, fontSize: "0.72rem", flex: 1,
                   "&:hover": { bgcolor: C.pdfBg } }}>
                 View PDF
               </Button>
-              {/* Download PDF — same endpoint with disposition=attachment triggers browser save dialog */}
+              {/* Download PDF — same but with disposition=attachment */}
               <Button flex={1} variant="contained" size="small"
                 startIcon={<DownloadIcon />}
-                onClick={() => {
-                  const token = localStorage.getItem("token");
-                  window.open(
-                    `${BASE_URL}/api/courses/${course._id}/pdf-stream?disposition=attachment&token=${token}`,
-                    "_blank"
-                  );
+                onClick={async () => {
+                  const tid = toast.loading("Preparing download…");
+                  try {
+                    const token = localStorage.getItem("token");
+                    const r = await fetch(
+                      `${BASE_URL}/api/courses/${course._id}/pdf-url?disposition=attachment`,
+                      { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                    const data = await r.json();
+                    if (!r.ok || !data.url) throw new Error(data.message || "Failed");
+                    toast.dismiss(tid);
+                    window.open(data.url, "_blank");
+                  } catch (e) {
+                    toast.dismiss(tid);
+                    toast.error("Could not download PDF: " + e.message);
+                  }
                 }}
                 sx={{ bgcolor: C.pdf, borderRadius: "9px", textTransform: "none", fontWeight: 700,
                   fontSize: "0.72rem", flex: 1, "&:hover": { bgcolor: "#bf360c" } }}>
