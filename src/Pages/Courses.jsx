@@ -122,32 +122,54 @@ const CourseCard = ({ course, isMentor, onEdit, onDelete }) => {
         {/* Actions */}
         <Stack direction="row" spacing={1} flexWrap="wrap">
           {isPdf ? (
-            <>
-              {/* View PDF — open in new tab */}
+          <>
+              {/* View PDF — get signed URL first, then open in new tab */}
               <Button flex={1} variant="outlined" size="small"
                 startIcon={<PictureAsPdfIcon />}
-                onClick={() => window.open(course.fileUrl, "_blank")}
+                onClick={async () => {
+                  const tid = toast.loading("Opening PDF…");
+                  try {
+                    const token = localStorage.getItem("token");
+                    const res = await fetch(
+                      `${BASE_URL}/api/courses/${course._id}/signed-url?disposition=inline`,
+                      { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                    if (!res.ok) throw new Error("Failed to get URL");
+                    const { url } = await res.json();
+                    toast.dismiss(tid);
+                    window.open(url, "_blank");
+                  } catch {
+                    toast.dismiss(tid);
+                    toast.error("Could not open PDF. Please try again.");
+                  }
+                }}
                 sx={{ borderColor: C.pdf, color: C.pdf, borderRadius: "9px", textTransform: "none",
                   fontWeight: 700, fontSize: "0.72rem", flex: 1,
                   "&:hover": { bgcolor: C.pdfBg } }}>
                 View PDF
               </Button>
-              {/* Download PDF — proxy through fetch to avoid 401 */}
+              {/* Download PDF — get signed attachment URL then trigger download */}
               <Button flex={1} variant="contained" size="small"
                 startIcon={<DownloadIcon />}
                 onClick={async () => {
+                  const tid = toast.loading("Preparing download…");
                   try {
-                    const r = await fetch(course.fileUrl);
-                    if (!r.ok) throw new Error("fetch failed");
-                    const blob = await r.blob();
+                    const token = localStorage.getItem("token");
+                    const res = await fetch(
+                      `${BASE_URL}/api/courses/${course._id}/signed-url?disposition=attachment`,
+                      { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                    if (!res.ok) throw new Error("Failed to get URL");
+                    const { url } = await res.json();
+                    toast.dismiss(tid);
                     const a    = document.createElement("a");
-                    a.href     = URL.createObjectURL(blob);
+                    a.href     = url;
+                    a.target   = "_blank";  // open in new tab so download starts cleanly
                     a.download = (course.title || "document") + ".pdf";
                     a.click();
-                    URL.revokeObjectURL(a.href);
                   } catch {
-                    // fallback: open directly
-                    window.open(course.fileUrl, "_blank");
+                    toast.dismiss(tid);
+                    toast.error("Could not download PDF. Please try again.");
                   }
                 }}
                 sx={{ bgcolor: C.pdf, borderRadius: "9px", textTransform: "none", fontWeight: 700,
