@@ -99,9 +99,9 @@ const Home = () => {
         display: "flex",
         alignItems: "center",
         overflow: "hidden",
-        backgroundImage: "url('/hero_bg.png')",
+        backgroundImage: "url('/Assets/img(1).jpeg')",
         backgroundSize: "cover",
-        backgroundPosition: "center top",
+        backgroundPosition: "center center",
         backgroundRepeat: "no-repeat",
       }}>
         {/* Dark gradient overlay */}
@@ -380,7 +380,7 @@ const Home = () => {
       {/* ══════════════════════════════════════════════════════════════════════
           HOW IT WORKS — circles with fade animation (no cards)
       ══════════════════════════════════════════════════════════════════════ */}
-      <Box sx={{ py: 16, bgcolor: C.white }}>
+      <Box sx={{ py: 20, bgcolor: C.white }}>
         <Container maxWidth="lg">
           <Stack spacing={1.5} alignItems="center" textAlign="center" sx={{ mb: 10 }} data-aos="fade-up">
             <Typography variant="overline" sx={{ color: C.accent, fontWeight: 800, letterSpacing: 4 }}>HOW IT WORKS</Typography>
@@ -405,7 +405,7 @@ const Home = () => {
               opacity: 0.25,
             }} />
 
-            <Grid container spacing={{ xs: 6, md: 4 }}>
+            <Grid container spacing={{ xs: 6, md: 4 }} justifyContent="center">
               {steps.map((s, i) => (
                 <Grid item xs={12} md={4} key={i} sx={{ textAlign: "center", position: "relative", zIndex: 1 }}>
 
