@@ -99,7 +99,7 @@ const Home = () => {
         display: "flex",
         alignItems: "center",
         overflow: "hidden",
-        backgroundImage: "url('/Assets/img(1).jpeg')",
+        backgroundImage: "url('/Assets/hero.jpeg')",
         backgroundSize: "cover",
         backgroundPosition: "center center",
         backgroundRepeat: "no-repeat",
