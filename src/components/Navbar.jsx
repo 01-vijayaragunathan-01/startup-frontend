@@ -96,23 +96,7 @@ const Navbar = () => {
             {user ? (
               <Stack direction="row" spacing={1.5} alignItems="center">
                 {/* Chat badge — clicking goes to chat */}
-                <Tooltip title={totalUnread > 0 ? `${totalUnread} unread message${totalUnread > 1 ? "s" : ""}` : "Messages"}>
-                  <Badge badgeContent={totalUnread} color="error" max={99}
-                    sx={{ "& .MuiBadge-badge": { fontSize: "0.6rem", fontWeight: 800 } }}
-                    onClick={() => navigate("/chat")}
-                    style={{ cursor: "pointer" }}>
-                    <Box sx={{
-                      width: 36, height: 36, borderRadius: "10px",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      bgcolor: totalUnread > 0 ? "rgba(21,101,192,0.1)" : "transparent",
-                      animation: totalUnread > 0 ? "pulseChat 2s infinite" : "none",
-                      "&:hover": { bgcolor: "rgba(21,101,192,0.1)" },
-                    }}>
-                      {/* Chat icon via emoji for simplicity */}
-                      <Typography sx={{ fontSize: 18 }}>💬</Typography>
-                    </Box>
-                  </Badge>
-                </Tooltip>
+                
 
                 {/* Profile avatar — navigates to /my-profile */}
                 <Tooltip title={`${user.name} — Edit Profile`}>
