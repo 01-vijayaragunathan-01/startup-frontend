@@ -383,7 +383,7 @@ const Courses = () => {
                 <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
                   <Box sx={{ width: 4, height: 28, borderRadius: 2, bgcolor: C.pdf }} />
                   <Typography variant="h6" fontWeight={900} color={C.dark}>
-                    Study Materials (PDF)
+                    Study Materials
                   </Typography>
                   <Chip label={pdfs.length} size="small"
                     sx={{ bgcolor: C.pdfBg, color: C.pdf, fontWeight: 800 }} />
@@ -419,7 +419,7 @@ const Courses = () => {
               <Select label="Type" value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}
                 sx={{ borderRadius: "10px" }}>
                 <MenuItem value="video">🎬 Video</MenuItem>
-                <MenuItem value="pdf">📄 PDF / Study Material</MenuItem>
+                <MenuItem value="pdf">📄 Study Material (PDF / PPT / DOC)</MenuItem>
               </Select>
             </FormControl>
 
@@ -436,12 +436,14 @@ const Courses = () => {
               <Button component="label" variant="outlined" fullWidth startIcon={<UploadFileIcon />}
                 sx={{ borderRadius: "10px", borderColor: C.border, color: C.accent, textTransform: "none",
                   fontWeight: 700, py: 1.5, "&:hover": { borderColor: C.accent, bgcolor: C.accentBg } }}>
-                {fileRef.current?.files?.[0]?.name || `Choose ${form.type === "video" ? "Video" : "PDF"} File`}
+                {fileRef.current?.files?.[0]?.name || `Choose ${form.type === "video" ? "Video" : "Study Material"} File`}
                 <input hidden type="file" ref={fileRef}
-                  accept={form.type === "video" ? "video/*" : "application/pdf"} />
+                  accept={form.type === "video"
+                    ? "video/*"
+                    : "application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"} />
               </Button>
               <Typography variant="caption" color={C.textDim} sx={{ mt: 0.5, display: "block" }}>
-                {form.type === "video" ? "MP4, MOV, AVI — up to 200 MB" : "PDF — up to 50 MB"}
+                {form.type === "video" ? "MP4, MOV, AVI — up to 200 MB" : "PDF, PPT, PPTX, DOC, DOCX — up to 50 MB"}
               </Typography>
             </Box>
 

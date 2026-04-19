@@ -14,8 +14,8 @@ import MyProfile from "./Pages/MyProfile";
 import PrivateRoute from "./components/PrivateRoute";
 import ChatPage from "./Pages/ChatPage";
 
-import MarketTrends from "./Pages/MarketTrends";
-import AddResource from "./Pages/AddResource";
+// import MarketTrends from "./Pages/MarketTrends";
+// import AddResource from "./Pages/AddResource";
 import StudentHistory from "./Pages/StudentHistory";
 import StudentProfileView from "./Pages/StudentProfileView";
 import Courses from "./Pages/Courses";
@@ -42,8 +42,8 @@ const App = () => {
             // </PrivateRoute>
           }
         />
-        <Route path="/resources" element={<MarketTrends />} />
-        <Route path="/add-resource" element={<AddResource />} />
+        {/* <Route path="/resources" element={<MarketTrends />} /> */}
+        {/* <Route path="/add-resource" element={<AddResource />} /> */}
         {/* <Route path="/profile-update" element={<ProfileUpdate />} /> */}
         <Route path="/trends" element={<Trends />} />
         <Route path="/chat/:mentorId" element={<Chat />} />
